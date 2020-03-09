@@ -138,14 +138,29 @@ def testInvalid2():
   print('Sent ClientHello')
 
 ##################################################
-############ 4) Duration is not valid
+############ 2) More Than One Subject
 ##################################################
-def testInvalid4():
-  print('In testInvalid4')
+def testInvalid3():
   # Create the ClientHello response
   nstp_msg = nstp_proto.NSTPMessage()
   nstp_msg.client_hello.major_version = 4
   nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test3'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.CopyFrom(client_ert)
+  nstp_msg.client_hello.certificate.usages.extend([2])
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_lengnth = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 4) Duration is not valid
+##################################################
+def testInvalid4():
+  print('In testInvalid4')
   nstp_msg.client_hello.user_agent = 'test2'
 
   # Parse the cert for the server
@@ -186,6 +201,7 @@ def signCert(cert, is_self_signed):
     bindings.crypto_sign_ed25519ph_update(state, cert.issuer.algorithm.to_bytes(1, 'big'))
 
   return bindings.crypto_sign_ed25519ph_final_create(state, ca_private_key.signing_private_key)
+
 
 ##################################################
 ############ Write to the pinned store
