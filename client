@@ -34,7 +34,8 @@ def main():
   #testInvalid4()
   #testInvalid5()
   #testInvalid61()
-  testInvalid62()
+  #testInvalid62()
+  testInvalid64()
 
 ##################################################
 ############ Test invalid client certs
@@ -46,9 +47,9 @@ def main():
 4) Duration is not valid            -- DONE
 5) Is not of type CLIENT_AUTH
 6.1) Issuer is not valid: hash algo=0 --DONE
-6.2) Issuer is not valid: no subjects
+6.2) Issuer is not valid: no subjects --DONE
 6.3) Issuer is not valid: is pinned but does not validate
-6.4) Issuer is not valid: duration is not valid
+6.4) Issuer is not valid: duration is not valid --DONE
 6.5) Issuer is not valid: is not of type CERT_SIGNING
 6.6) Issuer is not valid: is not in trusted store
 6.7) Issuer is not valid: issuer is not valid=?
@@ -247,7 +248,38 @@ def testInvalid62():
   nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
   nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
 
-  issuerCert = createIssuerCert(False)
+  issuerCert = createIssuerCert(False, 1582603941, 2592000)
+  hashed = hashCert(issuerCert, 1)
+  nstp_msg.client_hello.certificate.issuer.value = hashed
+  nstp_msg.client_hello.certificate.issuer.algorithm = 1
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 6.4) Issuer is not valid: invalid time
+##################################################
+def testInvalid64():
+  print('In testInvalid64')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test6.4'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+
+  issuerCert = createIssuerCert(True, 0, 0)
   hashed = hashCert(issuerCert, 1)
   nstp_msg.client_hello.certificate.issuer.value = hashed
   nstp_msg.client_hello.certificate.issuer.algorithm = 1
@@ -263,12 +295,12 @@ def testInvalid62():
 ##################################################
 ############ Helper Functions
 ##################################################
-def createIssuerCert(subjects):
+def createIssuerCert(subjects, start, length):
     msg = nstp_proto.Certificate()
     if subjects:
-        msg.subjects.append(['sub1'])
-    msg.valid_from = 1582603941
-    msg.valid_length = 2592000
+        msg.subjects.extend(["sub1"])
+    msg.valid_from = start
+    msg.valid_length = length
     msg.usages.append(3)
     msg.encryption_public_key = bytes(PrivateKey.generate().public_key)
     msg.signing_public_key = bytes(PrivateKey.generate().public_key)
