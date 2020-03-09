@@ -27,13 +27,14 @@ status_sock.connect(("127.0.0.1", 22301))
 
 
 def main():
-  testInvalid1()
+  #testInvalid1()
+  testInvalid2()
 
 ##################################################
 ############ Test invalid client certs
 ##################################################
 '''
-1) More than one subject
+1) More than one subject            -- DONE
 2) No subjects
 3) Is pinned but does not validate
 4) Duration is not valid
@@ -81,7 +82,7 @@ print('Pinned certificate store')
 print(pinned_cert_store)
 
 ##################################################
-############ 1) More Than One Subject
+############ 1) No Subjects
 ##################################################
 def testInvalid1():
   print('In testInvalid1')
@@ -93,6 +94,33 @@ def testInvalid1():
 
   # Parse the cert for the server
   nstp_msg.client_hello.certificate.subjects.extend(['hello', 'world'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = client_cert.issuer.algorithm
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 2) More Than One Subject
+##################################################
+def testInvalid2():
+  print('In testInvalid2')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test2'
+
+  # Parse the cert for the server
   nstp_msg.client_hello.certificate.valid_from = 1582603941
   nstp_msg.client_hello.certificate.valid_length = 2592000
   nstp_msg.client_hello.certificate.usages.extend([1])
