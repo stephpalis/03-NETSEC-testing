@@ -27,6 +27,13 @@ server_sock.connect(("172.17.0.1", 22300))
 status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 status_sock.connect(("127.0.0.1", 22301))
 
+sixOne = None
+sixTwo = None
+sixThree = None
+sixFour = None
+sixFive = None
+sixSix = None
+sixSeven = None
 
 def main():
   #testInvalid1()
@@ -35,7 +42,8 @@ def main():
   #testInvalid5()
   #testInvalid61()
   #testInvalid62()
-  testInvalid64()
+  #testInvalid64()
+  testInvalid65()
 
 ##################################################
 ############ Test invalid client certs
@@ -50,7 +58,7 @@ def main():
 6.2) Issuer is not valid: no subjects --DONE
 6.3) Issuer is not valid: is pinned but does not validate
 6.4) Issuer is not valid: duration is not valid --DONE
-6.5) Issuer is not valid: is not of type CERT_SIGNING
+6.5) Issuer is not valid: is not of type CERT_SIGNING -- DONE
 6.6) Issuer is not valid: is not in trusted store
 6.7) Issuer is not valid: issuer is not valid=?
 7) Signature is not valid
@@ -220,7 +228,7 @@ def testInvalid61():
   nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
   nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
   nstp_msg.client_hello.certificate.issuer.algorithm = 0
-  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
   nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
 
   send_msg = nstp_msg.SerializeToString()
@@ -248,11 +256,11 @@ def testInvalid62():
   nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
   nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
 
-  issuerCert = createIssuerCert(False, 1582603941, 2592000)
+  issuerCert = sixTwo #createIssuerCert(False, 1582603941, 2592000, 0)
   hashed = hashCert(issuerCert, 1)
   nstp_msg.client_hello.certificate.issuer.value = hashed
   nstp_msg.client_hello.certificate.issuer.algorithm = 1
-  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
   nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
 
   send_msg = nstp_msg.SerializeToString()
@@ -279,11 +287,42 @@ def testInvalid64():
   nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
   nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
 
-  issuerCert = createIssuerCert(True, 0, 0)
+  issuerCert = sixFour# createIssuerCert(True, 0, 0, 0)
   hashed = hashCert(issuerCert, 1)
   nstp_msg.client_hello.certificate.issuer.value = hashed
   nstp_msg.client_hello.certificate.issuer.algorithm = 1
-  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 6.5) Issuer is not valid: not CERT_SIGNING
+##################################################
+def testInvalid65():
+  print('In testInvalid65')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test6.5'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+
+  issuerCert = sixFive #createIssuerCert(True, 1582603941, 2592000, 0)
+  hashed = hashCert(issuerCert, 1)
+  nstp_msg.client_hello.certificate.issuer.value = hashed
+  nstp_msg.client_hello.certificate.issuer.algorithm = 1
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
   nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
 
   send_msg = nstp_msg.SerializeToString()
@@ -295,13 +334,13 @@ def testInvalid64():
 ##################################################
 ############ Helper Functions
 ##################################################
-def createIssuerCert(subjects, start, length):
+def createIssuerCert(subjects, start, length, usage):
     msg = nstp_proto.Certificate()
     if subjects:
         msg.subjects.extend(["sub1"])
     msg.valid_from = start
     msg.valid_length = length
-    msg.usages.append(3)
+    msg.usages.append(usage)
     msg.encryption_public_key = bytes(PrivateKey.generate().public_key)
     msg.signing_public_key = bytes(PrivateKey.generate().public_key)
     msg.issuer_signature = signCert(msg, True)
@@ -374,6 +413,24 @@ pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2])
 hello.write(pinned_c_store.SerializeToString())
 hello.close()
 '''
+##################################################
+############ Write to the trusted store
+##################################################
+hello = open(trusted_cert_store_loc, "wb")
+trusted = nstp_proto.CertificateStore()
+sixTwo = createIssuerCert(False, 1582603941, 2592000, 0)
+print(sixTwo)
+sixThree = createIssuerCert(True, 0, 0, 0)  #TODO 
+sixFour = createIssuerCert(True, 0, 0, 0)
+sixFive = createIssuerCert(True, 1582603941, 2592000, 0)
+sixSix = createIssuerCert(True, 0, 0, 0) # TODO
+sixSeven = createIssuerCert(True, 0, 0, 0) #TODO
+l = [sixTwo, sixThree, sixFour, sixFive, sixSix, sixSeven]
+for i in range(6):
+    trusted.certificates.append(l[i])
+
+hello.write(trusted.SerializeToString())
+hello.close()
 
 
 main()
