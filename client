@@ -31,6 +31,7 @@ def main():
   #testInvalid2()
   #testInvalid4()
   testInvalid5()
+  testInvalid6()
 
 ##################################################
 ############ Test invalid client certs
@@ -193,6 +194,36 @@ def testInvalid5():
   msg_length = struct.pack('!H', len(send_msg))
   server_sock.send(msg_length + send_msg)
   print('Sent ClientHello')
+
+
+##################################################
+############ 6.1) More Than One Subject
+##################################################
+def testInvalid6():
+  print('In testInvalid6')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test6.1'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = 0
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
 
 ##################################################
 ############ Helper Functions
