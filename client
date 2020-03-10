@@ -293,10 +293,6 @@ def testInvalid9():
 ##################################################
 # 10) Stapled certificate does validate but has uncommon trust root
 ##################################################
-# note that the issuer CertificateHash will not validate as its not a real trust root
-# you should move up the logic that compares trust roots for this test
-# or comment out your issuer validation in CertificateStatusResponse handling
-
 def testInvalid10():
   # Create the ClientHello response
   nstp_msg = nstp_proto.NSTPMessage()
@@ -327,8 +323,6 @@ def testInvalid10():
 ##################################################
 # make sure that there is no status server running for this test
 # assumes your status server address is 127.0.0.1 / 22301
-
-# same restrictions as test 10
 
 def testInvalid11():
   # create status server sock
@@ -494,24 +488,28 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 ##################################################
 ############ Write to the pinned store
 ##################################################
-# hello = open("/data/mod_pinned_certs.db", "wb+")
-# pinned_c_store = nstp_proto.PinnedCertificateStore()
-# pinned_c1 = nstp_proto.PinnedCertificate()
-# pinned_c1.subject = status_cert.subjects[0]
-# pinned_c1.certificate.value = create_hash(status_cert, hashlib.sha512())
-# pinned_c1.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_c2 = nstp_proto.PinnedCertificate()
-# pinned_c2.subject = client_cert.subjects[0]
-# pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
-# pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2])
+hello = open("/data/mod_pinned_certs.db", "wb+")
+pinned_c_store = nstp_proto.PinnedCertificateStore()
+pinned_c1 = nstp_proto.PinnedCertificate()
+pinned_c1.subject = status_cert.subjects[0]
+pinned_c1.certificate.value = create_hash(status_cert, hashlib.sha512())
+pinned_c1.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_c2 = nstp_proto.PinnedCertificate()
+pinned_c2.subject = client_cert.subjects[0]
+pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
+pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_c3 = nstp_proto.PinnedCertificate()
+pinned_c3.subject = status_cert.subjects[0]
+pinned_c3.certificate.value = create_hash("foo".encode('UTF-8'), hashlib.sha512())
+pinned_c3.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2, pinned_c3])
 
-# hello.write(pinned_c_store.SerializeToString())
-# hello.close()
+hello.write(pinned_c_store.SerializeToString())
+hello.close()
 
 
-# print("writing to file")
-# print(pinned_c_store)
+print("writing to file")
+print(pinned_c_store)
 
 
 main()
