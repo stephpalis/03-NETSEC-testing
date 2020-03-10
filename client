@@ -235,6 +235,7 @@ def testInvalid8():
   nstp_msg.client_hello.certificate.CopyFrom(client_cert)
   nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
   nstp_msg.client_hello.certificate_status.certificate.algorithm = 3
+  print("for comparison")
   print(nstp_msg.client_hello.certificate_status.certificate)
   nstp_msg.client_hello.certificate_status.status = 2
   nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
