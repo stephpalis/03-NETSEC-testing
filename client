@@ -3,7 +3,7 @@
 ############ CLIENT FOR TESTING PURPOSES
 ##################################################
 import sys, yaml, socket, struct
-import nstp_v4_nstp_proto2 as nstp_proto
+import nstp_v4_pb2 as nstp_proto
 import nacl.bindings as bindings
 import hashlib
 import socket
