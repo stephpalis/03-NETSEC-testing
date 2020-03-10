@@ -12,7 +12,7 @@ status_server:
 trusted_certificate_store: "/data/trusted_certs.db"
 
 # Path to a `PinnedCertificateStore`
-pinned_certificate_store: "/data/pinned_certs.db"
+pinned_certificate_store: "/data/mod_pinned_certs.db"
 
 # Path to the server `Certificate`
 server_certificate: "/data/server.crt"
