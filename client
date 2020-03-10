@@ -524,7 +524,7 @@ trusted_cert_store.certificates.extend([other_ca])
 hello.write(trusted_cert_store.SerializeToString())
 hello.close()
 
-# print("writing to file")
+print("writing to file")
 # print(pinned_c_store)
 print(trusted_cert_store)
 
