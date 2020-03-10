@@ -9,7 +9,7 @@ status_server:
   port: 22301                   # Status server port
 
 # Path to a `CertificateStore`
-trusted_certificate_store: "/data/trusted_certs.db"
+trusted_certificate_store: "/data/mod_trusted_certs.db"
 
 # Path to a `PinnedCertificateStore`
 pinned_certificate_store: "/data/mod_pinned_certs.db"
