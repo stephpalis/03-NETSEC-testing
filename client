@@ -280,6 +280,8 @@ def testInvalid9():
   data, addr = status_sock.recvfrom(1024)
   req = nstp_proto.CertificateStatusRequest()
   req.ParseFromString(data)
+  print("req")
+  print(req)
 
   resp = nstp_proto.CertificateStatusResponse()
   resp.certificate.CopyFrom(req.certificate)
@@ -288,6 +290,8 @@ def testInvalid9():
   resp.valid_length = 2592000
   resp.status_certificate.CopyFrom(status_cert)
   resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
+  print("resp")
+  print(resp)
 
   status_sock.sendto(resp.SerializeToString(), addr)
   print('Sent CertificateStatusResponse')
