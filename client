@@ -516,18 +516,18 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 # hello.write(pinned_c_store.SerializeToString())
 # hello.close()
 
-hello = open("/data/mod_trusted_certs.db", "wb+")
-other_ca = nstp_proto.Certificate()
-other_ca.CopyFrom(trusted_cert_store.certificates[0])
-other_ca.subjects.extend(["other_ca"])
-other_ca.issuer_signature = cert_signature(other_ca, ca_private_key.signing_private_key)
-trusted_cert_store.certificates.extend([other_ca])
-hello.write(trusted_cert_store.SerializeToString())
-hello.close()
+# hello = open("/data/mod_trusted_certs.db", "wb+")
+# other_ca = nstp_proto.Certificate()
+# other_ca.CopyFrom(trusted_cert_store.certificates[0])
+# other_ca.subjects.extend(["other_ca"])
+# other_ca.issuer_signature = cert_signature(other_ca, ca_private_key.signing_private_key)
+# trusted_cert_store.certificates.extend([other_ca])
+# hello.write(trusted_cert_store.SerializeToString())
+# hello.close()
 
-print("writing to file")
+# print("writing to file")
 # print(pinned_c_store)
-print(trusted_cert_store)
+# print(trusted_cert_store)
 
 
 main()
