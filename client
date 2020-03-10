@@ -447,7 +447,7 @@ def cert_signature(cert: nstp_proto.Certificate, signing_key):
   return nacl.bindings.crypto_sign_ed25519ph_final_create(state, signing_key)
 
 
-def response_signature(response: nstp_proto.CertificateStatusResponse, signing_key):
+def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
   state = nacl.bindings.crypto_sign_ed25519ph_state()
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.certificate.value)
   if resp.certificate.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
