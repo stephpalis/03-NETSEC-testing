@@ -300,6 +300,9 @@ def testInvalid10():
   nstp_msg.client_hello.minor_version = 4444444
   nstp_msg.client_hello.user_agent = 'test10'
 
+  other_ca = nstp_proto.Certificate()
+  other_ca.CopyFrom(trusted_cert_store.certificates[1])
+
   nstp_msg.client_hello.certificate.CopyFrom(client_cert)
   nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
   nstp_msg.client_hello.certificate_status.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
@@ -308,7 +311,7 @@ def testInvalid10():
   nstp_msg.client_hello.certificate_status.valid_length = 2592000
   nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
   # vvvvvvvv this is the line i'm talking about
-  nstp_msg.client_hello.certificate_status.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
   nstp_msg.client_hello.certificate_status.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
   nstp_msg.client_hello.certificate_status.status_signature = response_signature(nstp_msg.client_hello.certificate_status, status_private_key.signing_private_key)
 
@@ -334,8 +337,10 @@ def testInvalid11():
   nstp_msg.client_hello.major_version = 4
   nstp_msg.client_hello.minor_version = 4444444
   nstp_msg.client_hello.user_agent = 'test11'
-
   nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
+  other_ca = nstp_proto.Certificate()
+  other_ca.CopyFrom(trusted_cert_store.certificates[1])
 
   send_msg = nstp_msg.SerializeToString()
   msg_length = struct.pack('!H', nstp_msg.ByteSize())
@@ -352,7 +357,7 @@ def testInvalid11():
   resp.valid_from = int(time.time())
   resp.valid_length = 2592000
   resp.status_certificate.CopyFrom(status_cert)
-  resp.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
+  resp.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
   resp.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
   resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
 
@@ -511,9 +516,17 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 # hello.write(pinned_c_store.SerializeToString())
 # hello.close()
 
+hello = open("/data/mod_trusted_certs.db", "wb+")
+other_ca = nstp_proto.Certificate()
+other_ca.CopyFrom(trusted_cert_store.certificates[0])
+other_ca.subjects.extend(["other_ca"])
+trusted_cert_store.certificates.extend([other_ca])
+hello.write(trusted_cert_store.SerializeToString())
+hello.close()
 
 # print("writing to file")
 # print(pinned_c_store)
+print(trusted_cert_store)
 
 
 main()
