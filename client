@@ -7,6 +7,7 @@ import nstp_v4_pb2 as nstp_proto
 import nacl.bindings as bindings
 import hashlib
 import socket
+import os
 
 client_cert_file = open("/data/client.crt", "rb").read()
 client_cert      = nstp_proto.Certificate()
@@ -252,6 +253,16 @@ def testInvalid8():
 # assumes your status server address is 127.0.0.1 / 22301
 
 def testInvalid9():
+  # create status server sock
+  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  status_sock.bind(('0.0.0.0', 22301))
+
+  os.sleep(10)
+  # during this time you should start up your nstp server
+  # not sure about you guys but my implementation needs the status
+  # server to be up before starting the nstp server
+
+
   # Create the ClientHello response
   nstp_msg = nstp_proto.NSTPMessage()
   nstp_msg.client_hello.major_version = 4
@@ -265,8 +276,7 @@ def testInvalid9():
   server_sock.send(msg_length + send_msg)
   print('Sent ClientHello')
 
-  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  status_sock.bind(('0.0.0.0', 22301))
+  
   data, addr = status_sock.recvfrom(1024)
   req = nstp_proto.CertificateStatusRequest()
   req.ParseFromString(data)
