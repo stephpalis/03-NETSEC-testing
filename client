@@ -37,10 +37,14 @@ status_sock.connect(("127.0.0.1", 22301))
 
 
 def main():
-  testInvalid1()
-  testInvalid2()
+  # testInvalid1()
+  # testInvalid2()
   testInvalid3()
-  testInvalid4()
+  # testInvalid4()
+  # testInvalid8()
+  # testInvalid9()
+  # testInvalid10()
+  # testInvalid11()
 
 ##################################################
 ############ Test invalid client certs
@@ -281,10 +285,76 @@ def testInvalid9():
 ##################################################
 # 10) Stapled certificate does validate but has uncommon trust root
 ##################################################
+# note that the issuer CertificateHash will not validate as its not a real trust root
+# you should move up the logic that compares trust roots for this test
+# or comment out your issuer validation in CertificateStatusResponse handling
+
+def testInvalid10():
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test10'
+
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+  nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
+  nstp_msg.client_hello.certificate_status.certificate.algorithm = 3
+  nstp_msg.client_hello.certificate_status.status = 1
+  nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
+  nstp_msg.client_hello.certificate_status.valid_length = 2592000
+  nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
+  # vvvvvvvv this is the line i'm talking about
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status_signature = status_signature(nstp_msg.client_hello.certificate_status, status_private_key.signing_private_key)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
 
 ##################################################
 # 11) Queried certificate does validate but has uncommon trust root
 ##################################################
+# make sure that there is no status server running for this test
+# assumes your status server address is 127.0.0.1 / 22301
+
+# same restrictions as test 10
+
+def testInvalid11():
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test11'
+
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  status_sock.bind(('0.0.0.0', 22301))
+  data, addr = status_sock.recvfrom(1024)
+  req = nstp_proto.CertificateStatusRequest()
+  req.ParseFromString(data)
+
+  resp = nstp_proto.CertificateStatusResponse()
+  resp.certificate.CopyFrom(req.certificate)
+  resp.status = 2
+  resp.valid_from = int(time.time())
+  resp.valid_length = 2592000
+  resp.status_certificate.CopyFrom(status_cert)
+  resp.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8'))
+  resp.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  resp.status_signature = status_signature(resp, status_private_key.signing_private_key)
+
+  status_sock.sendto(resp.SerializeToString(), addr)
+  print('Sent CertificateStatusResponse')
+
 
 ##################################################
 ############ Helper Functions
@@ -361,7 +431,7 @@ def cert_signature(cert: nstp_proto: Certificate, signing_key):
       nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
     elif cert.issuer.algorithm is pb.HashAlgorithm.SHA256:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA256:
+    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA512:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
   return nacl.bindings.crypto_sign_ed25519ph_final_create(state, signing_key)
 
