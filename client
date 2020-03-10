@@ -170,7 +170,7 @@ def testInvalid3():
   nstp_msg.client_hello.certificate.usages.extend([2])
 
   send_msg = nstp_msg.SerializeToString()
-  msg_lengnth = struct.pack('!H', len(send_msg))
+  msg_length = struct.pack('!H', len(send_msg))
   server_sock.send(msg_length + send_msg)
   print('Sent ClientHello')
 
