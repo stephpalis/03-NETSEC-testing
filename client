@@ -24,6 +24,8 @@ ca_private_key.ParseFromString(ca_private_key_file)
 with open("/data/status.crt", "rb") as status_cert_file:
   status_cert = nstp_proto.Certificate()
   status_cert.ParseFromString(status_cert_file.read())
+  print("status cert")
+  print(status_cert)
 
 with open("/data/status.key", "rb") as status_private_key_file:
   status_private_key = nstp_proto.PrivateKey()
