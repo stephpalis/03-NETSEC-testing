@@ -8,7 +8,6 @@ import nacl.bindings
 import time
 import hashlib
 import socket
-import os
 
 client_cert_file = open("/data/client.crt", "rb").read()
 client_cert      = nstp_proto.Certificate()
@@ -258,7 +257,7 @@ def testInvalid9():
   status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   status_sock.bind(('0.0.0.0', 22301))
 
-  os.sleep(10)
+  time.sleep(10)
   # during this time you should start up your nstp server
   # not sure about you guys but my implementation needs the status
   # server to be up before starting the nstp server
@@ -514,4 +513,4 @@ hello.close()
 
 
 main()
-os.sleep(1)
+time.sleep(1)
