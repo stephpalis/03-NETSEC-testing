@@ -37,10 +37,14 @@ status_sock.connect(("127.0.0.1", 22301))
 
 
 def main():
-  testInvalid1()
-  testInvalid2()
+  # testInvalid1()
+  # testInvalid2()
   testInvalid3()
-  testInvalid4()
+  # testInvalid4()
+  # testInvalid8()
+  # testInvalid9()
+  # testInvalid10()
+  # testInvalid11()
 
 ##################################################
 ############ Test invalid client certs
