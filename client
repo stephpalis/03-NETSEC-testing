@@ -500,7 +500,7 @@ pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
 pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_c3 = nstp_proto.PinnedCertificate()
 pinned_c3.subject = status_cert.subjects[0]
-pinned_c3.certificate.value = create_hash("foo".encode('UTF-8'), hashlib.sha512())
+pinned_c3.certificate.value = hashlib.sha512("foo".encode('UTF-8')).digest()
 pinned_c3.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2, pinned_c3])
 
