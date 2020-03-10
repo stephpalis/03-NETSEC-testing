@@ -496,7 +496,7 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 ##################################################
 ############ Write to the pinned store
 ##################################################
-hello = open("~/mod_pinned_certs.db", "wb")
+hello = open("~/mod_pinned_certs.db", "wb+")
 pinned_c_store = nstp_proto.PinnedCertificateStore()
 pinned_c1 = nstp_proto.PinnedCertificate()
 pinned_c1.subject = status_cert.subjects[0]
