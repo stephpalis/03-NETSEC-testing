@@ -44,8 +44,8 @@ def main():
   # testInvalid4()
   # testInvalid8()
   # testInvalid9()
-  testInvalid10()
-  # testInvalid11()
+  # testInvalid10()
+  testInvalid11()
 
 ##################################################
 ############ Test invalid client certs
@@ -256,12 +256,6 @@ def testInvalid9():
   # create status server sock
   status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   status_sock.bind(('0.0.0.0', 22301))
-
-  # time.sleep(10)
-  # during this time you should start up your nstp server
-  # not sure about you guys but my implementation needs the status
-  # server to be up before starting the nstp server
-
 
   # Create the ClientHello response
   nstp_msg = nstp_proto.NSTPMessage()
