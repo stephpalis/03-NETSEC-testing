@@ -237,7 +237,7 @@ def testInvalid8():
   nstp_msg.client_hello.certificate_status.certificate.algorithm = 3
   print("for comparison")
   print(nstp_msg.client_hello.certificate_status.certificate)
-  nstp_msg.client_hello.certificate_status.status = 2
+  nstp_msg.client_hello.certificate_status.status = nstp_proto.CertificateStatus.REVOKED
   nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
   nstp_msg.client_hello.certificate_status.valid_length = 2592000
   nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
@@ -285,7 +285,7 @@ def testInvalid9():
 
   resp = nstp_proto.CertificateStatusResponse()
   resp.certificate.CopyFrom(req.certificate)
-  resp.status = 2
+  resp.status = nstp_proto.CertificateStatus.REVOKED
   resp.valid_from = int(time.time())
   resp.valid_length = 2592000
   resp.status_certificate.CopyFrom(status_cert)
@@ -310,8 +310,8 @@ def testInvalid10():
 
   nstp_msg.client_hello.certificate.CopyFrom(client_cert)
   nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
-  nstp_msg.client_hello.certificate_status.certificate.algorithm = 3
-  nstp_msg.client_hello.certificate_status.status = 1
+  nstp_msg.client_hello.certificate_status.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status = nstp_proto.CertificateStatus.VALID
   nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
   nstp_msg.client_hello.certificate_status.valid_length = 2592000
   nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
