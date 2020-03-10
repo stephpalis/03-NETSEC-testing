@@ -43,8 +43,8 @@ def main():
   # testInvalid3()
   # testInvalid4()
   # testInvalid8()
-  testInvalid9()
-  # testInvalid10()
+  # testInvalid9()
+  testInvalid10()
   # testInvalid11()
 
 ##################################################
