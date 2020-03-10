@@ -24,8 +24,6 @@ ca_private_key.ParseFromString(ca_private_key_file)
 with open("/data/status.crt", "rb") as status_cert_file:
   status_cert = nstp_proto.Certificate()
   status_cert.ParseFromString(status_cert_file.read())
-  print("status cert")
-  print(status_cert)
 
 with open("/data/status.key", "rb") as status_private_key_file:
   status_private_key = nstp_proto.PrivateKey()
@@ -237,6 +235,7 @@ def testInvalid8():
   nstp_msg.client_hello.certificate.CopyFrom(client_cert)
   nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
   nstp_msg.client_hello.certificate_status.certificate.algorithm = 3
+  print(nstp_msg.client_hello.certificate_status.certificate)
   nstp_msg.client_hello.certificate_status.status = 2
   nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
   nstp_msg.client_hello.certificate_status.valid_length = 2592000
