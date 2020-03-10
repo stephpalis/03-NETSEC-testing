@@ -3,7 +3,7 @@
 ############ CLIENT FOR TESTING PURPOSES
 ##################################################
 import sys, yaml, socket, struct
-import nstp_v4_pb2 as nstp_proto
+import nstp_v4_nstp_proto2 as nstp_proto
 import nacl.bindings as bindings
 import hashlib
 import socket
@@ -395,23 +395,23 @@ def create_hash(cert: nstp_proto.Certificate, hasher):
   hasher.update(cert.valid_from.to_bytes(8, 'big'))
   hasher.update(cert.valid_length.to_bytes(4, 'big'))
   for usage in cert.usages:
-    if usage is pb.CertificateUsage.CERTIFICATE_SIGNING:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
       hasher.update((0).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.CLIENT_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
       hasher.update((1).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.SERVER_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
       hasher.update((2).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.STATUS_SIGNING:
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
       hasher.update((3).to_bytes(1, 'big'))
   hasher.update(cert.encryption_public_key)
   hasher.update(cert.signing_public_key)
   if cert.HasField("issuer"):
     hasher.update(cert.issuer.value)
-    if cert.issuer.algorithm is pb.HashAlgorithm.IDENTITY:
+    if cert.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
       hasher.update((0).to_bytes(1, 'big'))
-    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA256:
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
       hasher.update((1).to_bytes(1, 'big'))
-    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA512:
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
       hasher.update((2).to_bytes(1, 'big'))
   hasher.update(cert.issuer_signature)
 
@@ -425,23 +425,23 @@ def cert_signature(cert: nstp_proto.Certificate, signing_key):
   nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_from.to_bytes(8, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_length.to_bytes(4, 'big'))
   for usage in cert.usages:
-    if usage is pb.CertificateUsage.CERTIFICATE_SIGNING:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.CLIENT_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.SERVER_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.STATUS_SIGNING:
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (3).to_bytes(1, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, cert.encryption_public_key)
   nacl.bindings.crypto_sign_ed25519ph_update(state, cert.signing_public_key)
   if cert.HasField("issuer"):
     nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.value)
-    if cert.issuer.algorithm is pb.HashAlgorithm.IDENTITY:
+    if cert.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA256:
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-    elif cert.issuer.algorithm is pb.HashAlgorithm.SHA512:
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
   return nacl.bindings.crypto_sign_ed25519ph_final_create(state, signing_key)
 
@@ -449,17 +449,17 @@ def cert_signature(cert: nstp_proto.Certificate, signing_key):
 def response_signature(response: nstp_proto.CertificateStatusResponse, signing_key):
   state = nacl.bindings.crypto_sign_ed25519ph_state()
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.certificate.value)
-  if resp.certificate.algorithm is pb.HashAlgorithm.IDENTITY:
+  if resp.certificate.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-  elif resp.certificate.algorithm is pb.HashAlgorithm.SHA256:
+  elif resp.certificate.algorithm is nstp_proto.HashAlgorithm.SHA256:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-  elif resp.certificate.algorithm is pb.HashAlgorithm.SHA512:
+  elif resp.certificate.algorithm is nstp_proto.HashAlgorithm.SHA512:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
-  if resp.status is pb.CertificateStatus.UNKNOWN:
+  if resp.status is nstp_proto.CertificateStatus.UNKNOWN:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-  elif resp.status is pb.CertificateStatus.VALID:
+  elif resp.status is nstp_proto.CertificateStatus.VALID:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-  elif resp.status is pb.CertificateStatus.REVOKED:
+  elif resp.status is nstp_proto.CertificateStatus.REVOKED:
     nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.valid_from.to_bytes(8, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.valid_length.to_bytes(4, 'big'))
@@ -469,23 +469,23 @@ def response_signature(response: nstp_proto.CertificateStatusResponse, signing_k
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.valid_from.to_bytes(8, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.valid_length.to_bytes(4, 'big'))
   for usage in resp.status_certificate.usages:
-    if usage is pb.CertificateUsage.CERTIFICATE_SIGNING:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.CLIENT_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.SERVER_AUTHENTICATION:
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
-    elif usage is pb.CertificateUsage.STATUS_SIGNING:
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (3).to_bytes(1, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.encryption_public_key)
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.signing_public_key)
   if resp.status_certificate.HasField("issuer"):
     nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.issuer.value)
-    if resp.status_certificate.issuer.algorithm is pb.HashAlgorithm.IDENTITY:
+    if resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
-    elif resp.status_certificate.issuer.algorithm is pb.HashAlgorithm.SHA256:
+    elif resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
-    elif resp.status_certificate.issuer.algorithm is pb.HashAlgorithm.SHA512:
+    elif resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
       nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
   nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.issuer_signature)
 
