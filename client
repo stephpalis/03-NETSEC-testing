@@ -20,16 +20,11 @@ ca_private_key_file = open("/data/ca.key", "rb").read()
 ca_private_key = nstp_proto.PrivateKey()
 ca_private_key.ParseFromString(ca_private_key_file)
 
-sixOne = None
-sixTwo = None
-sixThree = None
-sixFour = None
-sixFive = None
-sixSix = None
-sixSeven = None
+server_sock = None
 
 
 def connect():
+    global server_sock
     # Set up the server socket
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.connect(("172.17.0.1", 22300))
@@ -38,10 +33,22 @@ def connect():
     status_sock.connect(("127.0.0.1", 22301))
 
 
+def generate_certificates(trusted_list):
+    six_two, six_three, six_four, six_five, six_six, six_seven = trusted_list
+    generate65Certs(six_five)
+
+
 def main():
-    update_trust_store()
-    input("press any key to being testing")
+    # ============================================
+    # SETUP: RUN THIS ONCE AND THEN COMMENT OUT
+    #
+    # trusted_list = generate_trust_store()
+    # generate_certificates(trusted_list)
+    # gen_updated_pinned_certs()
+    # ============================================
+
     connect()
+
     # testInvalid1()
     # testInvalid2()
     # testInvalid4()
@@ -103,6 +110,17 @@ pinned_cert_store_file = open(pinned_cert_store_loc, "rb").read()
 pinned_cert_store.ParseFromString(pinned_cert_store_file)
 print('Pinned certificate store')
 print(pinned_cert_store)
+
+
+def read_data_file(file, protobuf):
+    with open(file, 'rb') as f_server_file:
+        b_server_file = f_server_file.read()
+        protobuf.ParseFromString(b_server_file)
+
+
+def write_data_file(file, protobuf):
+    with open(file, 'wb') as f_server_file:
+        f_server_file.write(protobuf.SerializeToString())
 
 
 ##################################################
@@ -316,50 +334,58 @@ def testInvalid64():
 ##################################################
 ############ 6.5) Issuer is not valid: not CERT_SIGNING
 ##################################################
+def generate65Certs(issuer_cert):
+    client_certificate_65 = nstp_proto.Certificate()
+    client_certificate_65.subjects.extend(['hello'])
+    client_certificate_65.valid_from = 1582603941
+    client_certificate_65.valid_length = 2592000
+    client_certificate_65.usages.extend([1])
+    client_certificate_65.encryption_public_key = client_certificate_65.encryption_public_key
+    client_certificate_65.signing_public_key = client_certificate_65.signing_public_key
+
+    hashed = hashCert(issuer_cert, 1)
+    client_certificate_65.issuer.value = hashed
+    client_certificate_65.issuer.algorithm = 1
+    issuer_signature = signCert(client_certificate_65, True)
+    client_certificate_65.issuer_signature = issuer_signature
+
+    write_data_file("/data/client_65.crt", client_certificate_65)
+    print("Successfully generated 'client_65.crt'")
+
+
 def testInvalid65():
-    print('In testInvalid65')
+    print('Starting testInvalid65')
+
+    # Read the client certificate
+    client_certificate_65 = nstp_proto.Certificate()
+    read_data_file("/data/client_65.crt", client_certificate_65)
+
     # Create the ClientHello response
-    nstp_msg = nstp_proto.NSTPMessage()
-    nstp_msg.client_hello.major_version = 4
-    nstp_msg.client_hello.minor_version = 4444444
-    nstp_msg.client_hello.user_agent = 'test6.5'
+    nstp_msg_65 = nstp_proto.NSTPMessage()
+    nstp_msg_65.client_hello.major_version = 4
+    nstp_msg_65.client_hello.minor_version = 4444444
+    nstp_msg_65.client_hello.user_agent = 'test6.5'
+    nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_65)
 
-    # Parse the cert for the server
-    nstp_msg.client_hello.certificate.subjects.extend(['hello'])
-    nstp_msg.client_hello.certificate.valid_from = 1582603941
-    nstp_msg.client_hello.certificate.valid_length = 2592000
-    nstp_msg.client_hello.certificate.usages.extend([1])
-    nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
-    nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
-
-    issuerCert = sixFive  # createIssuerCert(True, 1582603941, 2592000, 0)
-    hashed = hashCert(issuerCert, 1)
-    nstp_msg.client_hello.certificate.issuer.value = hashed
-    nstp_msg.client_hello.certificate.issuer.algorithm = 1
-    issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
-    nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
-
-    send_msg = nstp_msg.SerializeToString()
+    send_msg = nstp_msg_65.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
 
 
 ##################################################
 ############ Helper Functions
 ##################################################
 def createIssuerCert(subjects, start, length, usage):
-    msg = nstp_proto.Certificate()
+    certificate = nstp_proto.Certificate()
     if subjects:
-        msg.subjects.extend(["sub1"])
-    msg.valid_from = start
-    msg.valid_length = length
-    msg.usages.append(usage)
-    msg.encryption_public_key = bytes(PrivateKey.generate().public_key)
-    msg.signing_public_key = bytes(PrivateKey.generate().public_key)
-    msg.issuer_signature = signCert(msg, True)
-
-    return msg
+        certificate.subjects.extend(["sub1"])
+    certificate.valid_from = start
+    certificate.valid_length = length
+    certificate.usages.append(usage)
+    certificate.encryption_public_key = bytes(PrivateKey.generate().public_key)
+    certificate.signing_public_key = bytes(PrivateKey.generate().public_key)
+    certificate.issuer_signature = signCert(certificate, True)
+    return certificate
 
 
 def signCert(cert, is_self_signed):
@@ -433,22 +459,51 @@ hello.close()
 ##################################################
 ############ Write to the trusted store
 ##################################################
-def update_trust_store():
-    hello = open(trusted_cert_store_loc, "wb")
-    trusted = nstp_proto.CertificateStore()
-    sixTwo = createIssuerCert(False, 1582603941, 2592000, 0)
-    # print(sixTwo)
-    sixThree = createIssuerCert(True, 0, 0, 0)  # TODO
-    sixFour = createIssuerCert(True, 0, 0, 0)
-    sixFive = createIssuerCert(True, 1582603941, 2592000, 0)
-    sixSix = createIssuerCert(True, 0, 0, 0)  # TODO
-    sixSeven = createIssuerCert(True, 0, 0, 0)  # TODO
-    l = [sixTwo, sixThree, sixFour, sixFive, sixSix, sixSeven]
-    for i in range(len(l)):
-        trusted.certificates.append(l[i])
-    hello.write(trusted.SerializeToString())
-    hello.close()
-    print("successfully updated trust store")
+def gen_updated_pinned_certs():
+    pinned_certificates = nstp_proto.PinnedCertificateStore()
+    read_data_file("/data/pinned_certs.db", pinned_certificates)
+
+    status_cert = nstp_proto.Certificate()
+    read_data_file("/data/status.crt", status_cert)
+
+    cert_hash = nstp_proto.CertificateHash()
+    cert_hash.algorithm = 2
+    cert_hash.value = hashCert(status_cert, 2)
+
+    pin = nstp_proto.PinnedCertificate()
+    pin.subject = "127.0.0.1"
+    pin.certificate.CopyFrom(cert_hash)
+    pinned_certificates.pinned_certificates.append(pin)
+    write_data_file("/data/pinned_certs_status.db", pinned_certificates)
+
+    print("Successfully updated pinned store")
+
+def generate_trust_store():
+    trusted_certificate_store = nstp_proto.CertificateStore()
+    read_data_file("/data/trusted_certs.db", trusted_certificate_store)
+
+    six_two = createIssuerCert(False, 1582603941, 2592000, 0)
+    six_three = createIssuerCert(True, 0, 0, 0)  # TODO
+    six_four = createIssuerCert(True, 0, 0, 0)
+    six_five = createIssuerCert(True, 1582603941, 2592000, 0)
+    six_six = createIssuerCert(True, 0, 0, 0)  # TODO
+    six_seven = createIssuerCert(True, 0, 0, 0)  # TODO
+
+    list_trusted = (six_two, six_three, six_four, six_five, six_six, six_seven)
+    for trusted_cert in list_trusted:
+        trusted_certificate_store.certificates.append(trusted_cert)
+
+    write_data_file("/data/trusted_certs_six.db", trusted_certificate_store)
+
+    write_data_file("/data/trusted_62.crt", six_two)
+    write_data_file("/data/trusted_63.crt", six_three)
+    write_data_file("/data/trusted_64.crt", six_four)
+    write_data_file("/data/trusted_65.crt", six_five)
+    write_data_file("/data/trusted_66.crt", six_six)
+    write_data_file("/data/trusted_67.crt", six_seven)
+
+    print("Successfully updated trust store")
+    return list_trusted
 
 
 main()
