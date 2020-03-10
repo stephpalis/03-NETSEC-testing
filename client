@@ -356,7 +356,7 @@ def testInvalid11():
 
   resp = nstp_proto.CertificateStatusResponse()
   resp.certificate.CopyFrom(req.certificate)
-  resp.status = 2
+  resp.status = nstp_proto.CertificateStatus.VALID
   resp.valid_from = int(time.time())
   resp.valid_length = 2592000
   resp.status_certificate.CopyFrom(status_cert)
@@ -496,22 +496,24 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 ##################################################
 ############ Write to the pinned store
 ##################################################
-'''
-hello = open(pinned_cert_store_loc, "wb")
+hello = open("~/mod_pinned_certs.db", "wb")
 pinned_c_store = nstp_proto.PinnedCertificateStore()
 pinned_c1 = nstp_proto.PinnedCertificate()
-pinned_c1.subject = "127.0.0.1"
-pinned_c1.certificate.value = b'JE<\x02C+q\x13V\xe4\x84\xb8\xc3^\x12\x16\xaaB\x95d\xde\xb7yl$\xf3\x9d=\x19\x1d.\x16\xf3p\xe3#<]\xf1\xabD\r\xca\xa0.\xf7\xc4\x1c\x93\xa8Jm\xcd\x12\x1fd\xa1\xd3q\x08\xee\x1f\xd5\xaa'
-pinned_c1.certificate.algorithm = 2
+pinned_c1.subject = status_cert.subjects[0]
+pinned_c1.certificate.value = create_hash(status_cert, hashlib.sha512())
+pinned_c1.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_c2 = nstp_proto.PinnedCertificate()
-pinned_c2.subject = "127.0.0.1"
-pinned_c2.certificate.value = b'JE<\002C+q\023V\344\204\270\303^\022\026\252B\225d\336\267yl$\363\235=\031\035.\026\363p\343#<]\361\253D\r\312\240.\367\304\034\223\250Jm\315\022\037d\241\323q\010\356\037\325\252'
-pinned_c2.certificate.algorithm = 2
+pinned_c2.subject = client_cert.subjects[0]
+pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
+pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2])
 
 hello.write(pinned_c_store.SerializeToString())
 hello.close()
-'''
+
+
+print("writing to file")
+print(pinned_c_store)
 
 
 main()
