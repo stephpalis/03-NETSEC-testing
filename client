@@ -331,6 +331,10 @@ def testInvalid10():
 # same restrictions as test 10
 
 def testInvalid11():
+  # create status server sock
+  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  status_sock.bind(('0.0.0.0', 22301))
+
   # Create the ClientHello response
   nstp_msg = nstp_proto.NSTPMessage()
   nstp_msg.client_hello.major_version = 4
@@ -344,8 +348,6 @@ def testInvalid11():
   server_sock.send(msg_length + send_msg)
   print('Sent ClientHello')
 
-  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  status_sock.bind(('0.0.0.0', 22301))
   data, addr = status_sock.recvfrom(1024)
   req = nstp_proto.CertificateStatusRequest()
   req.ParseFromString(data)
