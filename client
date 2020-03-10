@@ -358,7 +358,7 @@ def testInvalid11():
   resp.valid_from = int(time.time())
   resp.valid_length = 2592000
   resp.status_certificate.CopyFrom(status_cert)
-  resp.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8'))
+  resp.status_certificate.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
   resp.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
   resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
 
