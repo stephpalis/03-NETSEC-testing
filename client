@@ -5,6 +5,7 @@
 import sys, yaml, socket, struct
 import nstp_v4_pb2 as nstp_proto
 import nacl.bindings as bindings
+import time
 import hashlib
 import socket
 import os
