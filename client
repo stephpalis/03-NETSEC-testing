@@ -379,7 +379,7 @@ def signCert(cert, is_self_signed):
   return bindings.crypto_sign_ed25519ph_final_create(state, ca_private_key.signing_private_key)
 
 
-def create_hash(cert: pb.Certificate, hasher):
+def create_hash(cert: nstp_proto.Certificate, hasher):
   for subject in cert.subjects:
     hasher.update(subject.encode('UTF-8'))
   hasher.update(cert.valid_from.to_bytes(8, 'big'))
@@ -408,7 +408,7 @@ def create_hash(cert: pb.Certificate, hasher):
   return hasher.digest()
 
 
-def cert_signature(cert: nstp_proto: Certificate, signing_key):
+def cert_signature(cert: nstp_proto.Certificate, signing_key):
   state = nacl.bindings.crypto_sign_ed25519ph_state()
   for subject in cert.subjects:
     nacl.bindings.crypto_sign_ed25519ph_update(state, subject.encode("UTF-8"))
