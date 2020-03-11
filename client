@@ -312,6 +312,7 @@ def testInvalid10():
   nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
   nstp_msg.client_hello.certificate_status.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
   nstp_msg.client_hello.certificate_status.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer_signature = cert_signature(nstp_msg.client_hello.certificate_status.status_certificate, ca_private_key.signing_private_key)
   nstp_msg.client_hello.certificate_status.status_signature = response_signature(nstp_msg.client_hello.certificate_status, status_private_key.signing_private_key)
 
   send_msg = nstp_msg.SerializeToString()
@@ -358,6 +359,7 @@ def testInvalid11():
   resp.status_certificate.CopyFrom(status_cert)
   resp.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
   resp.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  resp.status_certificate.issuer_signature = cert_signature(resp.status_certificate, ca_private_key.signing_private_key)
   resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
 
   status_sock.sendto(resp.SerializeToString(), addr)
