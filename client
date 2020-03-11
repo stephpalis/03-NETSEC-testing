@@ -528,8 +528,8 @@ pinned_c4.certificate.value = create_hash(pinned_cert4, hashlib.sha512())
 pinned_c4.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2, pinned_c3, pinned_c4])
 
-# hello.write(pinned_c_store.SerializeToString())
-# hello.close()
+hello.write(pinned_c_store.SerializeToString())
+hello.close()
 
 # hello = open("/data/mod_trusted_certs.db", "wb+")
 # trusted_cert_store.certificates.extend([other_ca])
