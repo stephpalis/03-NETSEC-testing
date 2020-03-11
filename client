@@ -31,7 +31,7 @@ with open("/data/status.key", "rb") as status_private_key_file:
 
 # Set up the server socket
 server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_sock.connect(("127.0.0.1", 22300))
+server_sock.connect(("172.17.0.1", 22300))
 # Set up the status socket
 status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 status_sock.connect(("127.0.0.1", 22301))
