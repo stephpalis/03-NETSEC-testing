@@ -520,7 +520,7 @@ pinned_c3.certificate.value = create_hash(pinned_cert3, hashlib.sha512())
 pinned_c3.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_cert4 = nstp_proto.Certificate()
 pinned_cert4.CopyFrom(status_cert)
-pinned_cert4.issuer.value = create_hash(other_ca, nstp_proto.HashAlgorithm.SHA512)
+pinned_cert4.issuer.value = create_hash(other_ca, hashlib.sha512())
 pinned_cert4.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
 pinned_cert4.issuer_signature = cert_signature(pinned_cert4, ca_private_key.signing_private_key)
 pinned_c4 = nstp_proto.PinnedCertificate()
