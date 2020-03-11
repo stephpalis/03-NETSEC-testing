@@ -493,40 +493,52 @@ def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
 ##################################################
 ############ Write to the pinned store
 ##################################################
-# hello = open("/data/mod_pinned_certs.db", "wb+")
-# pinned_c_store = nstp_proto.PinnedCertificateStore()
-# pinned_c1 = nstp_proto.PinnedCertificate()
-# pinned_c1.subject = status_cert.subjects[0]
-# pinned_c1.certificate.value = create_hash(status_cert, hashlib.sha512())
-# pinned_c1.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_c2 = nstp_proto.PinnedCertificate()
-# pinned_c2.subject = client_cert.subjects[0]
-# pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
-# pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_cert3 = nstp_proto.Certificate()
-# pinned_cert3.CopyFrom(status_cert)
-# pinned_cert3.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
-# pinned_cert3.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_c3 = nstp_proto.PinnedCertificate()
-# pinned_c3.subject = status_cert.subjects[0]
-# pinned_c3.certificate.value = create_hash(pinned_cert3, hashlib.sha512())
-# pinned_c3.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
-# pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2, pinned_c3])
+other_ca = nstp_proto.Certificate()
+other_ca.CopyFrom(trusted_cert_store.certificates[0])
+other_ca.subjects.extend(["other_ca"])
+other_ca.issuer_signature = cert_signature(other_ca, ca_private_key.signing_private_key)
 
-# hello.write(pinned_c_store.SerializeToString())
-# hello.close()
+
+hello = open("/data/mod_pinned_certs.db", "wb+")
+pinned_c_store = nstp_proto.PinnedCertificateStore()
+pinned_c1 = nstp_proto.PinnedCertificate()
+pinned_c1.subject = status_cert.subjects[0]
+pinned_c1.certificate.value = create_hash(status_cert, hashlib.sha512())
+pinned_c1.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_c2 = nstp_proto.PinnedCertificate()
+pinned_c2.subject = client_cert.subjects[0]
+pinned_c2.certificate.value = create_hash(client_cert, hashlib.sha512())
+pinned_c2.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_cert3 = nstp_proto.Certificate()
+pinned_cert3.CopyFrom(status_cert)
+pinned_cert3.issuer.value = hashlib.sha512("foo".encode('UTF-8')).digest()
+pinned_cert3.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_cert3.issuer_signature = cert_signature(pinned_cert3, ca_private_key.signing_private_key)
+pinned_c3 = nstp_proto.PinnedCertificate()
+pinned_c3.subject = status_cert.subjects[0]
+pinned_c3.certificate.value = create_hash(pinned_cert3, hashlib.sha512())
+pinned_c3.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_cert4 = nstp_proto.Certificate()
+pinned_cert4.CopyFrom(status_cert)
+pinned_cert4.issuer.value = create_hash(other_ca, nstp_proto.HashAlgorithm.SHA512)
+pinned_cert4.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_cert4.issuer_signature = cert_signature(pinned_cert4, ca_private_key.signing_private_key)
+pinned_c4 = nstp_proto.PinnedCertificate()
+pinned_c4.subject = status_cert.subjects[0]
+pinned_c4.certificate.value = create_hash(pinned_cert4, hashlib.sha512())
+pinned_c4.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+pinned_c_store.pinned_certificates.extend([pinned_c1, pinned_c2, pinned_c3, pinned_c4])
+
+hello.write(pinned_c_store.SerializeToString())
+hello.close()
 
 # hello = open("/data/mod_trusted_certs.db", "wb+")
-# other_ca = nstp_proto.Certificate()
-# other_ca.CopyFrom(trusted_cert_store.certificates[0])
-# other_ca.subjects.extend(["other_ca"])
-# other_ca.issuer_signature = cert_signature(other_ca, ca_private_key.signing_private_key)
 # trusted_cert_store.certificates.extend([other_ca])
 # hello.write(trusted_cert_store.SerializeToString())
 # hello.close()
 
-# print("writing to file")
-# print(pinned_c_store)
+print("writing to file")
+print(pinned_c_store)
 # print(trusted_cert_store)
 
 
