@@ -44,8 +44,8 @@ def main():
   # testInvalid4()
   # testInvalid8()
   # testInvalid9()
-  testInvalid10()
-  # testInvalid11()
+  # testInvalid10()
+  testInvalid11()
 
 ##################################################
 ############ Test invalid client certs
