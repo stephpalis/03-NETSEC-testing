@@ -455,22 +455,22 @@ def testInvalid11():
 ##################################################
 def signCert(cert, is_self_signed):
   # Compute the sig over this cert
-  state = bindings.crypto_sign_ed25519ph_state()
+  state = nacl.bindings.crypto_sign_ed25519ph_state()
 
   # subject
   for subject in cert.subjects:
-    bindings.crypto_sign_ed25519ph_update(state, subject.encode('UTF-8'))
-  bindings.crypto_sign_ed25519ph_update(state, cert.valid_from.to_bytes(8, 'big'))
-  bindings.crypto_sign_ed25519ph_update(state, cert.valid_length.to_bytes(4, 'big'))
+    nacl.bindings.crypto_sign_ed25519ph_update(state, subject.encode('UTF-8'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_from.to_bytes(8, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_length.to_bytes(4, 'big'))
   for usage in cert.usages:
-    bindings.crypto_sign_ed25519ph_update(state, usage.to_bytes(1, 'big'))
-  bindings.crypto_sign_ed25519ph_update(state, cert.encryption_public_key)
-  bindings.crypto_sign_ed25519ph_update(state, cert.signing_public_key)
+    nacl.bindings.crypto_sign_ed25519ph_update(state, usage.to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.encryption_public_key)
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.signing_public_key)
   if is_self_signed == False:
-    bindings.crypto_sign_ed25519ph_update(state, cert.issuer.value)
-    bindings.crypto_sign_ed25519ph_update(state, cert.issuer.algorithm.to_bytes(1, 'big'))
+    nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.value)
+    nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.algorithm.to_bytes(1, 'big'))
 
-  return bindings.crypto_sign_ed25519ph_final_create(state, ca_private_key.signing_private_key)
+  return nacl.bindings.crypto_sign_ed25519ph_final_create(state, ca_private_key.signing_private_key)
 
 
 def create_hash(cert: nstp_proto.Certificate, hasher):
