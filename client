@@ -82,6 +82,13 @@ def main():
     # testInvalid62()
     # testInvalid64()
     testInvalid65()
+    # testInvalid7()
+    # testInvalid8()
+    # testInvalid9()  # Turn off your status server before
+    # testInvalid10()
+    # testInvalid11()  # Turn off your status server before
+
+    # printCertStores()
 
     # After each test, receive the result
     print('Receiving a new NSTPMessage')
@@ -204,9 +211,6 @@ def testInvalid2():
 ############################################################################################
 # ########### 3) Is pinned but does not validate
 ############################################################################################
-# uses same subjects as pinned cert, but an extra usage
-# if you validate usage before checking pinned certs, use the other version
-
 def testInvalid3():
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
@@ -216,7 +220,7 @@ def testInvalid3():
 
     # Parse the cert for the server
     nstp_msg.client_hello.certificate.CopyFrom(client_cert)
-    nstp_msg.client_hello.certificate.usages.extend([2])
+    nstp_msg.client_hello.certificate.valid_from = 1582603940
 
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
@@ -224,34 +228,15 @@ def testInvalid3():
     print('Sent ClientHello')
 
 
-# this option has a wrong time
-# if this still doesnt work for you then just check pinned certs earlier i guess
-'''
-def testInvalid3():
-  # Create the ClientHello response
-  nstp_msg = nstp_proto.NSTPMessage()
-  nstp_msg.client_hello.major_version = 4
-  nstp_msg.client_hello.minor_version = 4444444
-  nstp_msg.client_hello.user_agent = 'test3'
-
-  # Parse the cert for the server
-  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
-  nstp_msg.client_hello.certificate.valid_from = 0
-
-  send_msg = nstp_msg.SerializeToString()
-  msg_lengnth = struct.pack('!H', len(send_msg))
-  server_sock.send(msg_length + send_msg)
-  print('Sent ClientHello')
-'''
-
-
 ############################################################################################
 # ########### 4) Duration is not valid
 ############################################################################################
 def testInvalid4():
     print('In testInvalid4')
+    # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
-
+    nstp_msg.client_hello.major_version = 4
+    nstp_msg.client_hello.minor_version = 4444444
     nstp_msg.client_hello.user_agent = 'test4'
 
     # Parse the cert for the server
