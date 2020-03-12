@@ -1,9 +1,13 @@
 #! /usr/bin/env python3
-##################################################
-############ CLIENT FOR TESTING PURPOSES
-##################################################
-from nacl.public import PrivateKey
-import sys, yaml, socket, struct, binascii
+
+############################################################################################
+# ########### CLIENT FOR TESTING PURPOSES
+############################################################################################
+
+import sys
+import yaml
+import struct
+import binascii
 import nstp_v4_pb2 as nstp_proto
 import nacl.bindings
 import time
@@ -13,6 +17,9 @@ import subprocess
 import threading
 
 
+############################################################################################
+# ########### SETUP: reading PKI files
+############################################################################################
 def read_data_file(file, protobuf):
     with open(file, 'rb') as f_server_file:
         b_server_file = f_server_file.read()
@@ -35,7 +42,10 @@ read_data_file("pki/ca.key", ca_private_key)
 
 trusted_store_orig = nstp_proto.CertificateStore()
 read_data_file("pki/trusted_certs.db", trusted_store_orig)
-root_cert = trusted_store_orig.certificates[0]
+ROOT_CERT = trusted_store_orig.certificates[0]
+
+mod_trusted_store = nstp_proto.CertificateStore()
+read_data_file("pki/mod_trusted_certs.db", mod_trusted_store)
 
 status_cert = nstp_proto.Certificate()
 read_data_file("pki/status.crt", status_cert)
@@ -48,6 +58,9 @@ status_sock = None
 threads = []
 
 
+############################################################################################
+# ########### MAIN FUNCTION
+############################################################################################
 def main():
     global server_sock, status_sock
     # ============================================
@@ -71,17 +84,20 @@ def main():
     testInvalid65()
 
     # After each test, receive the result
-    # print('Receiving a new NSTPMessage')
-    # nstp_msg = nstp_proto.NSTPMessage()
-    # msg_length_recv = recv_safe(server_sock, 2)
-    # msg_length = int(binascii.hexlify(msg_length_recv), 16)
-    # print('msg_length=' + str(msg_length))
-    # data = recv_safe(server_sock, msg_length)
-    # nstp_msg.ParseFromString(data)
-    # print('Received NSTPMessage:')
-    # print(nstp_msg)
+    print('Receiving a new NSTPMessage')
+    nstp_msg = nstp_proto.NSTPMessage()
+    msg_length_recv = recv_safe(server_sock, 2)
+    msg_length = int(binascii.hexlify(msg_length_recv), 16)
+    print('msg_length=' + str(msg_length))
+    data = recv_safe(server_sock, msg_length)
+    nstp_msg.ParseFromString(data)
+    print('Received NSTPMessage:')
+    print(nstp_msg)
 
     for thread in threads:
+        # This is specifically to force the program to stay open if the
+        #   status server was launched by the client; this allows the
+        #   user to kill the status server (ctrl + c) before exiting
         thread.join()
 
 
@@ -96,9 +112,9 @@ def connect():
     return soc_server, soc_status
 
 
-##################################################
+############################################################################################
 # ########### Test invalid client certs
-##################################################
+############################################################################################
 '''
 1) More than one subject            -- DONE
 2) No subjects                      -- DONE
@@ -119,18 +135,18 @@ def connect():
 11) Queried certificate does validate but has uncommon trust root -- DONE
 '''
 
-##################################################
+############################################################################################
 # ########### Test valid client certs
-##################################################
+############################################################################################
 '''
 1) Self-signed
 2) Has issuer
 '''
 
 
-##################################################
+############################################################################################
 # ########### 1) No Subjects
-##################################################
+############################################################################################
 def testInvalid1():
     print('In testInvalid1')
     # Create the ClientHello response
@@ -156,9 +172,9 @@ def testInvalid1():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 2) More Than One Subject
-##################################################
+############################################################################################
 def testInvalid2():
     print('In testInvalid2')
     # Create the ClientHello response
@@ -185,9 +201,9 @@ def testInvalid2():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 3) Is pinned but does not validate
-##################################################
+############################################################################################
 # uses same subjects as pinned cert, but an extra usage
 # if you validate usage before checking pinned certs, use the other version
 
@@ -229,9 +245,9 @@ def testInvalid3():
 '''
 
 
-##################################################
+############################################################################################
 # ########### 4) Duration is not valid
-##################################################
+############################################################################################
 def testInvalid4():
     print('In testInvalid4')
     nstp_msg = nstp_proto.NSTPMessage()
@@ -256,9 +272,9 @@ def testInvalid4():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 5) Is not of type CLIENT_AUTH
-##################################################
+############################################################################################
 def testInvalid5():
     print('In testInvalid5')
     # Create the ClientHello response
@@ -285,9 +301,9 @@ def testInvalid5():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 6.1) Issuer is not valid: Hash algo = 0
-##################################################
+############################################################################################
 def testInvalid61():
     print('In testInvalid6')
     # Create the ClientHello response
@@ -314,9 +330,9 @@ def testInvalid61():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 6.2) Issuer is not valid: no subjects
-##################################################
+############################################################################################
 def testInvalid62():
     print('In testInvalid62')
     # Create the ClientHello response
@@ -346,9 +362,9 @@ def testInvalid62():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 6.4) Issuer is not valid: invalid time
-##################################################
+############################################################################################
 def testInvalid64():
     print('In testInvalid64')
     # Create the ClientHello response
@@ -378,9 +394,9 @@ def testInvalid64():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # ########### 6.5) Issuer is not valid: not CERT_SIGNING
-##################################################
+############################################################################################
 def generate65Certs(issuer_cert):
     client_certificate_65 = nstp_proto.Certificate()
     client_certificate_65.subjects.extend(['hello'])
@@ -423,9 +439,9 @@ def testInvalid65():
     server_sock.send(msg_length + send_msg)
 
 
-##################################################
+############################################################################################
 # ########### 7) Signature is not valid
-##################################################
+############################################################################################
 def testInvalid7():
     print('In testInvalid7')
     # Create the ClientHello response
@@ -453,9 +469,9 @@ def testInvalid7():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # 8) Stapled certificate does not validate
-##################################################
+############################################################################################
 def testInvalid8():
     # certificate status is REVOKED
 
@@ -480,9 +496,9 @@ def testInvalid8():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # 9) Queried certificate does not validate
-##################################################
+############################################################################################
 # make sure that there is no status server running for this test
 # assumes your status server address is 127.0.0.1 / 22301
 
@@ -524,9 +540,9 @@ def testInvalid9():
     print('Sent CertificateStatusResponse')
 
 
-##################################################
+############################################################################################
 # 10) Stapled certificate does validate but has uncommon trust root
-##################################################
+############################################################################################
 def testInvalid10():
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
@@ -535,7 +551,7 @@ def testInvalid10():
     nstp_msg.client_hello.user_agent = 'test10'
 
     other_ca = nstp_proto.Certificate()
-    other_ca.CopyFrom(trusted_cert_store.certificates[1])
+    other_ca.CopyFrom(mod_trusted_store.certificates[1])
 
     nstp_msg.client_hello.certificate.CopyFrom(client_cert)
     nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
@@ -556,9 +572,9 @@ def testInvalid10():
     print('Sent ClientHello')
 
 
-##################################################
+############################################################################################
 # 11) Queried certificate does validate but has uncommon trust root
-##################################################
+############################################################################################
 # make sure that there is no status server running for this test
 # assumes your status server address is 127.0.0.1 / 22301
 
@@ -575,7 +591,7 @@ def testInvalid11():
     nstp_msg.client_hello.certificate.CopyFrom(client_cert)
 
     other_ca = nstp_proto.Certificate()
-    other_ca.CopyFrom(trusted_cert_store.certificates[1])
+    other_ca.CopyFrom(ROOT_CERT)
 
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', nstp_msg.ByteSize())
@@ -613,8 +629,8 @@ def create_issuer_cert(subjects, start, length, usage):
     certificate.usages.append(usage)
     # certificate.encryption_public_key = bytes(PrivateKey.generate().public_key)
     # certificate.signing_public_key = bytes(PrivateKey.generate().public_key)
-    certificate.encryption_public_key = root_cert.encryption_public_key
-    certificate.signing_public_key = root_cert.signing_public_key
+    certificate.encryption_public_key = ROOT_CERT.encryption_public_key
+    certificate.signing_public_key = ROOT_CERT.signing_public_key
     certificate.issuer_signature = sign_cert(certificate, True)
     return certificate
 
