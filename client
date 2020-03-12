@@ -53,8 +53,9 @@ read_data_file("pki/status.crt", status_cert)
 status_private_key = nstp_proto.PrivateKey()
 read_data_file("pki/status.key", status_private_key)
 
-server_sock = None
+status_addr = ("127.0.0.1", 22301)
 status_sock = None
+server_sock = None
 threads = []
 
 
@@ -128,7 +129,12 @@ def main():
     test_invalid_8()
     expect_error_msg_clear()
 
-    # test_invalid_9()  # Turn off your status server before
+    input("\nSTOP YOUR STATUS SERVER, THEN PRESS ENTER...")
+
+    server_sock, status_sock = connect()
+    test_invalid_9()
+    expect_error_msg_clear()
+
     # testInvalid10()
     # testInvalid11()  # Turn off your status server before
 
@@ -164,7 +170,6 @@ def connect():
 
     # Set up the status socket
     soc_status = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    soc_status.connect(("127.0.0.1", 22301))
     return soc_server, soc_status
 
 
@@ -655,7 +660,8 @@ def test_invalid_9():
     print("[TEST INVALID 9]: client certificate validates but is revoked (queried)")
     print("#####" * 17)
     # create status server sock
-    status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    global status_sock
+    # status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     status_sock.bind(('0.0.0.0', 22301))
 
     # Create the ClientHello response
@@ -674,8 +680,7 @@ def test_invalid_9():
     data, addr = status_sock.recvfrom(1024)
     req = nstp_proto.CertificateStatusRequest()
     req.ParseFromString(data)
-    print("req")
-    print(req)
+    print("received CertificateStatusRequest")
 
     resp = nstp_proto.CertificateStatusResponse()
     resp.certificate.CopyFrom(req.certificate)
@@ -684,11 +689,9 @@ def test_invalid_9():
     resp.valid_length = 2592000
     resp.status_certificate.CopyFrom(status_cert)
     resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
-    print("resp")
-    print(resp)
 
     status_sock.sendto(resp.SerializeToString(), addr)
-    print('sent CertificateStatusResponse')
+    print("sent CertificateStatusResponse")
 
 
 ############################################################################################
