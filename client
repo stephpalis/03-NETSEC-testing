@@ -83,8 +83,14 @@ def main():
     test_invalid_3()
     expect_error_msg_clear()
 
-    # testInvalid4()
-    # testInvalid5()
+    server_sock, status_sock = connect()
+    test_invalid_4()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_5()
+    expect_error_msg_clear()
+
     # testInvalid61()
     # testInvalid62()
     # testInvalid64()
@@ -253,8 +259,11 @@ def test_invalid_3():
 ############################################################################################
 # ########### 4) Duration is not valid
 ############################################################################################
-def testInvalid4():
-    print('In testInvalid4')
+def test_invalid_4():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 4]: client certificate time is invalid")
+    print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -276,14 +285,17 @@ def testInvalid4():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print('sent ClientHello')
 
 
 ############################################################################################
 # ########### 5) Is not of type CLIENT_AUTH
 ############################################################################################
-def testInvalid5():
-    print('In testInvalid5')
+def test_invalid_5():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 5]: client certificate missing usage CLIENT_AUTHENTICATION")
+    print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -305,7 +317,7 @@ def testInvalid5():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print('sent ClientHello')
 
 
 ############################################################################################
