@@ -729,9 +729,9 @@ def create_issuer_cert(subjects, start, length, usage):
 
 def sign_cert(cert, is_self_signed, private_key=None):
     if private_key is None:
-        print('private_key is none')
-        print(ca_private_key.signing_private_key)
-        print(ca_private_key)
+        # print('private_key is none')
+        # print(ca_private_key.signing_private_key)
+        # print(ca_private_key)
         private_key = ca_private_key.signing_private_key
 
     # Compute the sig over this cert
