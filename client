@@ -484,6 +484,44 @@ def test_invalid_62():
 
 
 ############################################################################################
+# ########### 6.3) Issuer is not valid: is pinned but does not validate
+############################################################################################
+def test_invalid_63():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 6.3]: client certificate issuer is pinned but invalid")
+    print("#####" * 17)
+    issuer_63 = nstp_proto.Certificate()
+    read_data_file("pki/trusted_63.crt", issuer_63)
+    issuer_63_hash_algorithm = 2
+    issuer_63_hash_value = hash_cert(issuer_63, issuer_63_hash_algorithm)
+
+    # Create the ClientHello response
+    nstp_msg = nstp_proto.NSTPMessage()
+    nstp_msg.client_hello.major_version = 4
+    nstp_msg.client_hello.minor_version = 1
+    nstp_msg.client_hello.user_agent = 'test6.3'
+
+    # Parse the cert for the server
+    # nstp_msg.client_hello.certificate.subjects.extend(['6invalid3'])
+    # nstp_msg.client_hello.certificate.valid_from = 1582603941
+    # nstp_msg.client_hello.certificate.valid_length = 6424575
+    # nstp_msg.client_hello.certificate.usages.extend([1])
+    # nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+    # nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+    # nstp_msg.client_hello.certificate.issuer.value = issuer_63_hash_value
+    # nstp_msg.client_hello.certificate.issuer.algorithm = issuer_63_hash_algorithm
+    # issuer_signature = sign_cert(nstp_msg.client_hello.certificate, False)
+    # nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+    # TODO
+
+    send_msg = nstp_msg.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
 # ########### 6.4) Issuer is not valid: invalid time
 ############################################################################################
 def generate_certs_64(issuer_cert):
