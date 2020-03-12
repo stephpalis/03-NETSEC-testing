@@ -116,10 +116,19 @@ def main():
     test_invalid_64()
     expect_error_msg_clear()
 
-    # testInvalid65()
-    # testInvalid7()
-    # testInvalid8()
-    # testInvalid9()  # Turn off your status server before
+    server_sock, status_sock = connect()
+    test_invalid_65()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_7()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_8()
+    expect_error_msg_clear()
+
+    # test_invalid_9()  # Turn off your status server before
     # testInvalid10()
     # testInvalid11()  # Turn off your status server before
 
@@ -171,13 +180,13 @@ def connect():
 6.1) Issuer is not valid: hash algo=0                                 -- DONE
 6.2) Issuer is not valid: no subjects                                 -- DONE
 6.3) Issuer is not valid: is pinned but does not validate             ** TBD
-6.4) Issuer is not valid: duration is not valid
-6.5) Issuer is not valid: is not of type CERT_SIGNING
-6.6) Issuer is not valid: is not in trusted store
-6.7) Issuer is not valid: issuer is not valid=?
-7) Signature is not valid                                             -- DONE
-8) Stapled certificate does not validate                              -- DONE
-9) Queried certificate does not validate                              -- DONE
+6.4) Issuer is not valid: duration is not valid                       -- DONE
+6.5) Issuer is not valid: is not of type CERT_SIGNING                 -- DONE
+6.6) Issuer is not valid: is not in trusted store                     ** TBD
+6.7) Issuer is not valid: issuer is not valid=?                       ** TBD
+7) Client certificate signature is not valid                          -- DONE
+8) Valid client certificate is revoked (stapled)                      -- DONE
+9) Valid client certificate is revoked (queried)                      -- DONE
 10) Stapled certificate does validate but has uncommon trust root     -- DONE
 11) Queried certificate does validate but has uncommon trust root     -- DONE
 '''
@@ -547,12 +556,11 @@ def generate_certs_65(issuer_cert):
     print("Successfully generated 'client_65.crt'")
 
 
-def testInvalid65():
-    print('Starting testInvalid65')
-
-    status_thread = threading.Thread(target=start_status_server, args={"/data/status_65.crt"})
-    threads.append(status_thread)
-    status_thread.start()
+def test_invalid_65():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 6.5]: client certificate issuer missing usage CERTIFICATE_SIGNING")
+    print("#####" * 17)
 
     # Read the client certificate
     client_certificate_65 = nstp_proto.Certificate()
@@ -561,28 +569,32 @@ def testInvalid65():
     # Create the ClientHello response
     nstp_msg_65 = nstp_proto.NSTPMessage()
     nstp_msg_65.client_hello.major_version = 4
-    nstp_msg_65.client_hello.minor_version = 4444444
+    nstp_msg_65.client_hello.minor_version = 9385
     nstp_msg_65.client_hello.user_agent = 'test6.5'
     nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_65)
 
     send_msg = nstp_msg_65.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
 
 
 ############################################################################################
 # ########### 7) Signature is not valid
 ############################################################################################
-def testInvalid7():
-    print('In testInvalid7')
+def test_invalid_7():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 7]: client certificate signature is invalid")
+    print("#####" * 17)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
-    nstp_msg.client_hello.minor_version = 4444444
+    nstp_msg.client_hello.minor_version = 5
     nstp_msg.client_hello.user_agent = 'test7'
 
     # Parse the cert for the server
-    nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+    nstp_msg.client_hello.certificate.subjects.extend(['test_user_7'])
     nstp_msg.client_hello.certificate.valid_from = 1582603941
     nstp_msg.client_hello.certificate.valid_length = 2592000
     nstp_msg.client_hello.certificate.usages.extend([1])
@@ -601,9 +613,13 @@ def testInvalid7():
 
 
 ############################################################################################
-# 8) Stapled certificate does not validate
+# 8) Valid client certificate is revoked (stapled)
 ############################################################################################
-def testInvalid8():
+def test_invalid_8():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 8]: client certificate validates but is revoked (stapled)")
+    print("#####" * 17)
     # certificate status is REVOKED
 
     # Create the ClientHello response
@@ -613,6 +629,7 @@ def testInvalid8():
     nstp_msg.client_hello.user_agent = 'test8'
 
     nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
     nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
     nstp_msg.client_hello.certificate_status.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
     nstp_msg.client_hello.certificate_status.status = nstp_proto.CertificateStatus.REVOKED
@@ -628,12 +645,15 @@ def testInvalid8():
 
 
 ############################################################################################
-# 9) Queried certificate does not validate
+# 9) Valid client certificate is revoked (queried)
 ############################################################################################
 # make sure that there is no status server running for this test
 # assumes your status server address is 127.0.0.1 / 22301
-
-def testInvalid9():
+def test_invalid_9():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 9]: client certificate validates but is revoked (queried)")
+    print("#####" * 17)
     # create status server sock
     status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     status_sock.bind(('0.0.0.0', 22301))
@@ -649,7 +669,7 @@ def testInvalid9():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', nstp_msg.ByteSize())
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print('sent ClientHello')
 
     data, addr = status_sock.recvfrom(1024)
     req = nstp_proto.CertificateStatusRequest()
@@ -668,7 +688,7 @@ def testInvalid9():
     print(resp)
 
     status_sock.sendto(resp.SerializeToString(), addr)
-    print('Sent CertificateStatusResponse')
+    print('sent CertificateStatusResponse')
 
 
 ############################################################################################
@@ -762,7 +782,7 @@ def expect_error_msg_clear():
     global server_sock
     nstp_msg, nstp_msg_type = recv_nstp_msg(server_sock)
     assert nstp_msg_type == Message.ERROR_MSG
-    print("response type:", nstp_msg_type)
+    print("response type:", nstp_msg_type.value)
     assert nstp_msg_type == Message.ERROR_MSG
     print("received error:", nstp_msg.error_message.error_message)
 
