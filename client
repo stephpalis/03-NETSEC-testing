@@ -3,7 +3,7 @@
 ############################################################################################
 # ########### CLIENT FOR TESTING PURPOSES
 ############################################################################################
-
+from enum import Enum
 import sys
 import yaml
 import struct
@@ -72,16 +72,24 @@ def main():
     # ============================================
 
     server_sock, status_sock = connect()
+    test_invalid_1()
+    expect_error_msg_clear()
 
-    # testInvalid1()
-    # testInvalid2()
+    server_sock, status_sock = connect()
+    test_invalid_2()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_3()
+    expect_error_msg_clear()
+
     # testInvalid4()
     # testInvalid5()
     # testInvalid6()
     # testInvalid61()
     # testInvalid62()
     # testInvalid64()
-    testInvalid65()
+    # testInvalid65()
     # testInvalid7()
     # testInvalid8()
     # testInvalid9()  # Turn off your status server before
@@ -91,15 +99,20 @@ def main():
     # printCertStores()
 
     # After each test, receive the result
-    print('Receiving a new NSTPMessage')
-    nstp_msg = nstp_proto.NSTPMessage()
-    msg_length_recv = recv_safe(server_sock, 2)
-    msg_length = int(binascii.hexlify(msg_length_recv), 16)
-    print('msg_length=' + str(msg_length))
-    data = recv_safe(server_sock, msg_length)
-    nstp_msg.ParseFromString(data)
-    print('Received NSTPMessage:')
-    print(nstp_msg)
+    # print('Receiving a new NSTPMessage')
+    # nstp_msg = nstp_proto.NSTPMessage()
+    # msg_length_recv = recv_safe(server_sock, 2)
+    # msg_length = int(binascii.hexlify(msg_length_recv), 16)
+    # print('msg_length=' + str(msg_length))
+    # data = recv_safe(server_sock, msg_length)
+    # nstp_msg.ParseFromString(data)
+    # print('Received NSTPMessage:')
+    # print(nstp_msg)
+
+    print()
+    print("#####" * 15)
+    print("SUCCESSFULLY COMPLETED ALL TESTS")
+    print("#####" * 15)
 
     for thread in threads:
         # This is specifically to force the program to stay open if the
@@ -154,8 +167,11 @@ def connect():
 ############################################################################################
 # ########### 1) No Subjects
 ############################################################################################
-def testInvalid1():
-    print('In testInvalid1')
+def test_invalid_1():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 1]: client certificate with no subjects")
+    print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -176,14 +192,17 @@ def testInvalid1():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print("sent ClientHello")
 
 
 ############################################################################################
 # ########### 2) More Than One Subject
 ############################################################################################
-def testInvalid2():
-    print('In testInvalid2')
+def test_invalid_2():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 2]: client certificate with more than one subject")
+    print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -205,13 +224,17 @@ def testInvalid2():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print('sent ClientHello')
 
 
 ############################################################################################
 # ########### 3) Is pinned but does not validate
 ############################################################################################
-def testInvalid3():
+def test_invalid_3():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 3]: client certificate pinned but does not validate")
+    print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -225,7 +248,7 @@ def testInvalid3():
     send_msg = nstp_msg.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
-    print('Sent ClientHello')
+    print('sent ClientHello')
 
 
 ############################################################################################
@@ -600,6 +623,57 @@ def testInvalid11():
 
     status_sock.sendto(resp.SerializeToString(), addr)
     print('Sent CertificateStatusResponse')
+
+
+############################################################################################
+# ########### RESPONSE FUNCTIONS
+############################################################################################
+class Message(Enum):
+    CLIENT_HELLO = "client_hello"
+    SERVER_HELLO = "server_hello"
+    ERROR_MSG = "error_message"
+    ENCRYPTED_MSG = "encrypted_message"
+
+
+def expect_error_msg_clear():
+    global server_sock
+    nstp_msg, nstp_msg_type = recv_nstp_msg(server_sock)
+    assert nstp_msg_type == Message.ERROR_MSG
+    print("response type:", nstp_msg_type)
+    assert nstp_msg_type == Message.ERROR_MSG
+    print("received error:", nstp_msg.error_message.error_message)
+
+
+def recv_nstp_msg(client_soc: socket.socket):
+    b_msg_len = recv_all(client_soc, 2)
+    if len(b_msg_len) < 2:
+        return b""
+
+    msg_len = struct.unpack("!H", b_msg_len)[0]
+    print("reading [{}] bytes".format(msg_len))
+    b_msg = recv_all(client_soc, msg_len)
+    if len(b_msg) < 2:
+        return b""
+
+    nstp_msg = nstp_proto.NSTPMessage()
+    nstp_msg.ParseFromString(b_msg)
+    nstp_msg_type_value = nstp_msg.WhichOneof("message_")
+    try:
+        nstp_msg_type = Message(nstp_msg_type_value)
+    except Exception as e:
+        print("unknown event occurred:", e)
+        nstp_msg_type = nstp_msg_type_value
+    return nstp_msg, nstp_msg_type
+
+
+def recv_all(client_soc: socket.socket, num: int):
+    b_msg = b""
+    while len(b_msg) < num:
+        b_piece = client_soc.recv(num - len(b_msg))
+        if len(b_piece) == 0:
+            break
+        b_msg += b_piece
+    return b_msg
 
 
 ############################################################################################
