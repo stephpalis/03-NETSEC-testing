@@ -103,9 +103,9 @@ def main():
     test_invalid_612()
     expect_error_msg_clear()
 
-    # server_sock, status_sock = connect()
-    # test_invalid_62()
-    # expect_error_msg_clear()
+    server_sock, status_sock = connect()
+    test_invalid_62()
+    expect_error_msg_clear()
 
     # server_sock, status_sock = connect()
     # test_invalid_63()
@@ -168,7 +168,7 @@ def connect():
 4) Duration is not valid                                              -- DONE
 5) Is not of type CLIENT_AUTH                                         -- DONE
 6.1) Issuer is not valid: hash algo=0                                 -- DONE
-6.2) Issuer is not valid: no subjects                                 ** TBD (see slack)
+6.2) Issuer is not valid: no subjects                                 -- DONE
 6.3) Issuer is not valid: is pinned but does not validate             ** TBD
 6.4) Issuer is not valid: duration is not valid
 6.5) Issuer is not valid: is not of type CERT_SIGNING
