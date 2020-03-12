@@ -92,7 +92,15 @@ def main():
     expect_error_msg_clear()
 
     server_sock, status_sock = connect()
-    test_invalid_61()
+    test_invalid_610()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_611()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_612()
     expect_error_msg_clear()
 
     # testInvalid62()
@@ -324,21 +332,85 @@ def test_invalid_5():
 
 
 ############################################################################################
-# ########### 6.1) Issuer is not valid: Hash algo = 0
+# ########### 6.1.0) Issuer is not valid: hashed with identity
 ############################################################################################
-def test_invalid_61():
+def test_invalid_610():
     print()
     print("#####" * 15)
-    print("[TEST INVALID 6.1]: client certificate issuer hash algorithm is incorrect")
+    print("[TEST INVALID 6.1.0]: client certificate issuer 'hashed' with identity")
     print("#####" * 15)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
     nstp_msg.client_hello.minor_version = 4444444
-    nstp_msg.client_hello.user_agent = 'test5'
+    nstp_msg.client_hello.user_agent = 'test6.1.0'
 
     # Parse the cert for the server
     nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+    nstp_msg.client_hello.certificate.valid_from = 1582603941
+    nstp_msg.client_hello.certificate.valid_length = 2592000
+    nstp_msg.client_hello.certificate.usages.extend([1])
+    nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+    nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+    nstp_msg.client_hello.certificate.issuer.value = ROOT_CERT.SerializeToString()
+    nstp_msg.client_hello.certificate.issuer.algorithm = 0
+    issuer_signature = sign_cert(nstp_msg.client_hello.certificate, False)
+    nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+    send_msg = nstp_msg.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
+# ########### 6.1.1) Issuer is not valid: sha256 hash given with algorithm 0
+############################################################################################
+def test_invalid_611():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 6.1.1]: client certificate issuer hashed sha256, but listed identity")
+    print("#####" * 15)
+    # Create the ClientHello response
+    nstp_msg = nstp_proto.NSTPMessage()
+    nstp_msg.client_hello.major_version = 4
+    nstp_msg.client_hello.minor_version = 4444444
+    nstp_msg.client_hello.user_agent = 'test6.1.1'
+
+    # Parse the cert for the server
+    nstp_msg.client_hello.certificate.subjects.extend(['testing'])
+    nstp_msg.client_hello.certificate.valid_from = 1582603941
+    nstp_msg.client_hello.certificate.valid_length = 2592000
+    nstp_msg.client_hello.certificate.usages.extend([1])
+    nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+    nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+    nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+    nstp_msg.client_hello.certificate.issuer.algorithm = 0
+    issuer_signature = sign_cert(nstp_msg.client_hello.certificate, False)
+    nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+    send_msg = nstp_msg.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
+# ########### 6.1.2) Issuer is not valid: sha256 hash given with algorithm 3
+############################################################################################
+def test_invalid_612():
+    print()
+    print("#####" * 15)
+    print("[TEST INVALID 6.1.2]: client certificate issuer hashed sha256, but listed '3'")
+    print("#####" * 15)
+    # Create the ClientHello response
+    nstp_msg = nstp_proto.NSTPMessage()
+    nstp_msg.client_hello.major_version = 4
+    nstp_msg.client_hello.minor_version = 4444444
+    nstp_msg.client_hello.user_agent = 'test6.1.2'
+
+    # Parse the cert for the server
+    nstp_msg.client_hello.certificate.subjects.extend(['testing'])
     nstp_msg.client_hello.certificate.valid_from = 1582603941
     nstp_msg.client_hello.certificate.valid_length = 2592000
     nstp_msg.client_hello.certificate.usages.extend([1])
