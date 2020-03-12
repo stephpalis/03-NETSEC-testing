@@ -69,6 +69,7 @@ def main():
     # trusted_list = setup_generate_updated_trust_store()
     # setup_generate_certificates(trusted_list)
     # setup_generate_updated_pinned_store()
+    # return
     # ============================================
 
     server_sock, status_sock = connect()
@@ -507,7 +508,6 @@ def test_invalid_64():
     nstp_msg.client_hello.minor_version = 12
     nstp_msg.client_hello.user_agent = 'test6.4'
 
-    # Parse the cert for the server
     # Read the client certificate
     client_certificate_64 = nstp_proto.Certificate()
     read_data_file("/data/client_64.crt", client_certificate_64)
@@ -802,10 +802,11 @@ def recv_all(client_soc: socket.socket, num: int):
 ############################################################################################
 # ########### HELPER FUNCTIONS
 ############################################################################################
-def create_issuer_cert(subjects, start, length, usage):
+def create_issuer_cert(subject, start, length, usage):
     certificate = nstp_proto.Certificate()
-    if subjects:
-        certificate.subjects.extend(["sub1"])
+    if subject is not None:
+        certificate.subjects.extend([subject])
+
     certificate.valid_from = start
     certificate.valid_length = length
     certificate.usages.append(usage)
@@ -1119,12 +1120,12 @@ def setup_generate_updated_trust_store():
     trusted_certificate_store = nstp_proto.CertificateStore()
     read_data_file("pki/mod_trusted_certs.db", trusted_certificate_store)
 
-    issuer_62 = create_issuer_cert(False, 1582603941, 2592000, 0)
-    issuer_63 = create_issuer_cert(True, 0, 0, 0)  # TODO
-    issuer_64 = create_issuer_cert(True, 0, 0, 0)
-    issuer_65 = create_issuer_cert(True, 1582603941, 2592000, 1)
-    issuer_66 = create_issuer_cert(True, 0, 0, 0)  # TODO
-    issuer_67 = create_issuer_cert(True, 0, 0, 0)  # TODO
+    issuer_62 = create_issuer_cert(None, 1582603941, 2592000, 0)
+    issuer_63 = create_issuer_cert("Issuer 6.3", 0, 0, 0)  # TODO
+    issuer_64 = create_issuer_cert("Issuer 6.4", 0, 0, 0)
+    issuer_65 = create_issuer_cert("Issuer 6.5", 1582603941, 2592000, 1)
+    issuer_66 = create_issuer_cert("Issuer 6.6", 0, 0, 0)  # TODO
+    issuer_67 = create_issuer_cert("Issuer 6.7", 0, 0, 0)  # TODO
 
     list_trusted = (issuer_62, issuer_63, issuer_64, issuer_65, issuer_66, issuer_67)
     for trusted_cert in list_trusted:
