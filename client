@@ -71,37 +71,37 @@ def main():
     # setup_generate_updated_pinned_store()
     # ============================================
 
-    # server_sock, status_sock = connect()
-    # test_invalid_1()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_2()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_3()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_4()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_5()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_610()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_611()
-    # expect_error_msg_clear()
-    #
-    # server_sock, status_sock = connect()
-    # test_invalid_612()
-    # expect_error_msg_clear()
+    server_sock, status_sock = connect()
+    test_invalid_1()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_2()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_3()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_4()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_5()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_610()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_611()
+    expect_error_msg_clear()
+
+    server_sock, status_sock = connect()
+    test_invalid_612()
+    expect_error_msg_clear()
 
     # server_sock, status_sock = connect()
     # test_invalid_62()
