@@ -119,6 +119,14 @@ def main():
     test_invalid_65()
     expect_error_msg_clear()
 
+    # server_sock, status_sock = connect()
+    # test_invalid_66()
+    # expect_error_msg_clear()
+
+    # server_sock, status_sock = connect()
+    # test_invalid_67()
+    # expect_error_msg_clear()
+
     server_sock, status_sock = connect()
     test_invalid_7()
     expect_error_msg_clear()
