@@ -66,9 +66,9 @@ def main():
     # ============================================
     # SETUP: LEAVE THIS COMMENTED OUT
     #
-    # trusted_list = setup_generate_updated_trust_store()
-    # setup_generate_certificates(trusted_list)
-    # setup_generate_updated_pinned_store()
+    #trusted_list = setup_generate_updated_trust_store()
+    ##setup_generate_certificates(trusted_list)
+    #setup_generate_updated_pinned_store()
     # ============================================
 
     server_sock, status_sock = connect()
@@ -85,7 +85,6 @@ def main():
 
     # testInvalid4()
     # testInvalid5()
-    # testInvalid6()
     # testInvalid61()
     # testInvalid62()
     # testInvalid64()
@@ -343,6 +342,7 @@ def testInvalid61():
 ############################################################################################
 def testInvalid62():
     print('In testInvalid62')
+    '''
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -368,6 +368,22 @@ def testInvalid62():
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
     print('Sent ClientHello')
+    '''
+    # Read the client certificate
+    client_certificate_62 = nstp_proto.Certificate()
+    read_data_file("pki/trusted_62.crt", client_certificate_62)
+
+    # Create the ClientHello response
+    nstp_msg_62 = nstp_proto.NSTPMessage()
+    nstp_msg_62.client_hello.major_version = 4
+    nstp_msg_62.client_hello.minor_version = 4444444
+    nstp_msg_62.client_hello.user_agent = 'test6.2'
+    nstp_msg_62.client_hello.certificate.CopyFrom(client_certificate_62)
+
+    send_msg = nstp_msg_62.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+
 
 
 ############################################################################################
@@ -375,6 +391,7 @@ def testInvalid62():
 ############################################################################################
 def testInvalid64():
     print('In testInvalid64')
+    '''
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
     nstp_msg.client_hello.major_version = 4
@@ -400,6 +417,22 @@ def testInvalid64():
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
     print('Sent ClientHello')
+    '''
+    # Read the client certificate
+    client_certificate_64 = nstp_proto.Certificate()
+    read_data_file("pki/trusted_64.crt", client_certificate_64)
+
+    # Create the ClientHello response
+    nstp_msg_64 = nstp_proto.NSTPMessage()
+    nstp_msg_64.client_hello.major_version = 4
+    nstp_msg_64.client_hello.minor_version = 4444444
+    nstp_msg_64.client_hello.user_agent = 'test6.4'
+    nstp_msg_64.client_hello.certificate.CopyFrom(client_certificate_64)
+
+    send_msg = nstp_msg_64.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+
 
 
 ############################################################################################
@@ -696,6 +729,9 @@ def create_issuer_cert(subjects, start, length, usage):
 
 def sign_cert(cert, is_self_signed, private_key=None):
     if private_key is None:
+        print('private_key is none')
+        print(ca_private_key.signing_private_key)
+        print(ca_private_key)
         private_key = ca_private_key.signing_private_key
 
     # Compute the sig over this cert
@@ -1025,7 +1061,7 @@ def setup_generate_updated_trust_store():
 
 def setup_generate_certificates(trusted_list):
     six_two, six_three, six_four, six_five, six_six, six_seven = trusted_list
-    generate65Certs(six_five)
+    #generate65Certs(six_five)
 
 
 # ====================================================================================
