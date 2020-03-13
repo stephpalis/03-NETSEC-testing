@@ -123,9 +123,9 @@ def main():
     test_invalid_66()
     expect_error_msg_clear()
 
-    # server_sock, status_sock = connect()
-    # test_invalid_67()
-    # expect_error_msg_clear()
+    server_sock, status_sock = connect()
+    test_invalid_67()
+    expect_error_msg_clear()
 
     server_sock, status_sock = connect()
     test_invalid_7()
@@ -186,7 +186,7 @@ def connect():
 6.4) Issuer is not valid: duration is not valid                       -- DONE
 6.5) Issuer is not valid: is not of type CERT_SIGNING                 -- DONE
 6.6) Issuer is not valid: is not in trusted store                     -- DONE
-6.7) Issuer is not valid: issuer is not valid=?                       ** TBD
+6.7) Issuer is not valid: issuer signature does not validate          ** TBD
 7) Client certificate signature is not valid                          -- DONE
 8) Valid client certificate is revoked (stapled)                      -- DONE
 9) Valid client certificate is revoked (queried)                      -- DONE
@@ -665,6 +665,47 @@ def test_invalid_66():
 
 
 ############################################################################################
+# ########### 6.7) Issuer is not valid: issuer signature does not validate
+############################################################################################
+def generate_certs_67(issuer_cert):
+    client_certificate_67 = nstp_proto.Certificate()
+    client_certificate_67.CopyFrom(client_cert)
+
+    client_certificate_67.subjects[0] = "client6.7"
+    client_certificate_67.issuer.value = hash_cert(issuer_cert, 1)
+    client_certificate_67.issuer.algorithm = 1
+
+    issuer_signature = sign_cert(client_certificate_67, False)
+    client_certificate_67.issuer_signature = issuer_signature
+
+    write_data_file("pki/client_67.crt", client_certificate_67)
+    print("Successfully generated 'client_67.crt'")
+
+
+def test_invalid_67():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 6.7]: client certificate issuer signature does not validate")
+    print("#####" * 17)
+
+    # Read the client certificate
+    client_certificate_67 = nstp_proto.Certificate()
+    read_data_file("/data/client_67.crt", client_certificate_67)
+
+    # Create the ClientHello response
+    nstp_msg_65 = nstp_proto.NSTPMessage()
+    nstp_msg_65.client_hello.major_version = 4
+    nstp_msg_65.client_hello.minor_version = 2308
+    nstp_msg_65.client_hello.user_agent = 'test6.7'
+    nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_67)
+
+    send_msg = nstp_msg_65.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
 # ########### 7) Signature is not valid
 ############################################################################################
 def test_invalid_7():
@@ -994,7 +1035,7 @@ def recv_all(client_soc: socket.socket, num: int):
 ############################################################################################
 # ########### HELPER FUNCTIONS
 ############################################################################################
-def create_issuer_cert(subject, start, length, usage):
+def create_issuer_cert(subject, start, length, usage, valid_sig=True):
     certificate = nstp_proto.Certificate()
     if subject is not None:
         certificate.subjects.extend([subject])
@@ -1006,7 +1047,16 @@ def create_issuer_cert(subject, start, length, usage):
     # certificate.signing_public_key = bytes(PrivateKey.generate().public_key)
     certificate.encryption_public_key = ROOT_CERT.encryption_public_key
     certificate.signing_public_key = ROOT_CERT.signing_public_key
-    certificate.issuer_signature = sign_cert(certificate, True)
+
+    if valid_sig:
+        signature = sign_cert(certificate, True)
+    else:
+        state = nacl.bindings.crypto_sign_ed25519ph_state()
+        nacl.bindings.crypto_sign_ed25519ph_update(state, "ABC".encode())
+        nacl.bindings.crypto_sign_ed25519ph_update(state, "DEF".encode())
+        private_key = ca_private_key.signing_private_key
+        signature = nacl.bindings.crypto_sign_ed25519ph_final_create(state, private_key)
+    certificate.issuer_signature = signature
     return certificate
 
 
@@ -1317,11 +1367,11 @@ def setup_generate_updated_trust_store():
     read_data_file("pki/mod_trusted_certs.db", trusted_certificate_store)
 
     issuer_62 = create_issuer_cert(None, 1582603941, 2592000, 0)
-    issuer_63 = create_issuer_cert("Issuer 6.3", 0, 0, 0)  # TODO
+    issuer_63 = create_issuer_cert("Issuer 6.3", 0, 0, 0)
     issuer_64 = create_issuer_cert("Issuer 6.4", 0, 0, 0)
     issuer_65 = create_issuer_cert("Issuer 6.5", 1582603941, 2592000, 1)
     issuer_66 = create_issuer_cert("Issuer 6.6", 1582603941, 2592000, 0)  # should not be in trust store
-    issuer_67 = create_issuer_cert("Issuer 6.7", 0, 0, 0)  # TODO
+    issuer_67 = create_issuer_cert("Issuer 6.7", 1582603941, 2592000, 0, valid_sig=False)
     issuer_10 = create_issuer_cert("Issuer 10", 1582603941, 2592000, 0)
 
     list_partial = (issuer_62, issuer_63, issuer_64, issuer_65, issuer_67, issuer_10)  # excluding issuer_66
@@ -1355,6 +1405,7 @@ def setup_generate_certificates(trusted_list):
     generate_certs_64(issuer_64)
     generate_certs_65(issuer_65)
     generate_certs_66(issuer_66)
+    generate_certs_67(issuer_67)
     generate_certs_9(ROOT_CERT)
     generate_certs_10(issuer_10)
     generate_certs_12(ROOT_CERT)
