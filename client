@@ -107,9 +107,9 @@ def main():
     test_invalid_62()
     expect_error_msg_clear()
 
-    # server_sock, status_sock = connect()
-    # test_invalid_63()
-    # expect_error_msg_clear()
+    server_sock, status_sock = connect()
+    test_invalid_63()
+    expect_error_msg_clear()
 
     server_sock, status_sock = connect()
     test_invalid_64()
@@ -182,7 +182,7 @@ def connect():
 6.1.1) Issuer is not valid: sha256 hash given with algorithm 0        -- DONE
 6.1.2) Issuer is not valid: sha256 hash given with algorithm 3        -- DONE
 6.2) Issuer is not valid: no subjects                                 -- DONE
-6.3) Issuer is not valid: is pinned but does not validate             ** TBD
+6.3) Issuer is not valid: is pinned but signature does not validate   -- DONE
 6.4) Issuer is not valid: duration is not valid                       -- DONE
 6.5) Issuer is not valid: is not of type CERT_SIGNING                 -- DONE
 6.6) Issuer is not valid: is not in trusted store                     -- DONE
@@ -491,38 +491,40 @@ def test_invalid_62():
 
 
 ############################################################################################
-# ########### 6.3) Issuer is not valid: is pinned but does not validate
+# ########### 6.3) Issuer is not valid: is pinned but signature does not validate
 ############################################################################################
+def generate_certs_63(issuer_cert):
+    client_certificate_63 = nstp_proto.Certificate()
+    client_certificate_63.CopyFrom(client_cert)
+
+    client_certificate_63.subjects[0] = "client6.3"
+    client_certificate_63.issuer.value = hash_cert(issuer_cert, 2)
+    client_certificate_63.issuer.algorithm = 2
+
+    issuer_signature = sign_cert(client_certificate_63, False)
+    client_certificate_63.issuer_signature = issuer_signature
+
+    write_data_file("pki/client_63.crt", client_certificate_63)
+    print("Successfully generated 'client_63.crt'")
+
+
 def test_invalid_63():
     print()
     print("#####" * 17)
-    print("[TEST INVALID 6.3]: client certificate issuer is pinned but invalid")
+    print("[TEST INVALID 6.3]: client certificate issuer is pinned but has invalid signature")
     print("#####" * 17)
-    issuer_63 = nstp_proto.Certificate()
-    read_data_file("pki/trusted_63.crt", issuer_63)
-    issuer_63_hash_algorithm = 2
-    issuer_63_hash_value = hash_cert(issuer_63, issuer_63_hash_algorithm)
+    # Read the client certificate
+    client_certificate_67 = nstp_proto.Certificate()
+    read_data_file("/data/client_63.crt", client_certificate_67)
 
     # Create the ClientHello response
-    nstp_msg = nstp_proto.NSTPMessage()
-    nstp_msg.client_hello.major_version = 4
-    nstp_msg.client_hello.minor_version = 1
-    nstp_msg.client_hello.user_agent = 'test6.3'
+    nstp_msg_65 = nstp_proto.NSTPMessage()
+    nstp_msg_65.client_hello.major_version = 4
+    nstp_msg_65.client_hello.minor_version = 124
+    nstp_msg_65.client_hello.user_agent = 'test6.3'
+    nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_67)
 
-    # Parse the cert for the server
-    # nstp_msg.client_hello.certificate.subjects.extend(['6invalid3'])
-    # nstp_msg.client_hello.certificate.valid_from = 1582603941
-    # nstp_msg.client_hello.certificate.valid_length = 6424575
-    # nstp_msg.client_hello.certificate.usages.extend([1])
-    # nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
-    # nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
-    # nstp_msg.client_hello.certificate.issuer.value = issuer_63_hash_value
-    # nstp_msg.client_hello.certificate.issuer.algorithm = issuer_63_hash_algorithm
-    # issuer_signature = sign_cert(nstp_msg.client_hello.certificate, False)
-    # nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
-    # TODO
-
-    send_msg = nstp_msg.SerializeToString()
+    send_msg = nstp_msg_65.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
     server_sock.send(msg_length + send_msg)
     print('sent ClientHello')
@@ -1358,6 +1360,23 @@ def setup_generate_updated_pinned_store():
     pinned_certificates.pinned_certificates.append(pin_66)
     pinned_certificates.pinned_certificates.append(pin_67)
 
+    # =========================================================== #
+
+    issuer_63 = nstp_proto.Certificate()
+    read_data_file("pki/trusted_63.crt", issuer_63)
+
+    issuer_63_hash = nstp_proto.CertificateHash()
+    issuer_63_hash.value = hash_cert(issuer_63, 1)
+    issuer_63_hash.algorithm = 1
+
+    pin_issuer_63 = nstp_proto.PinnedCertificate()
+    pin_issuer_63.subject = "Issuer 6.3"
+    pin_issuer_63.certificate.CopyFrom(issuer_63_hash)
+
+    pinned_certificates.pinned_certificates.append(pin_issuer_63)
+
+    # =========================================================== #
+
     write_data_file("pki/pinned_certs_v2.db", pinned_certificates)
     print("Successfully updated pinned store")
 
@@ -1367,7 +1386,7 @@ def setup_generate_updated_trust_store():
     read_data_file("pki/mod_trusted_certs.db", trusted_certificate_store)
 
     issuer_62 = create_issuer_cert(None, 1582603941, 2592000, 0)
-    issuer_63 = create_issuer_cert("Issuer 6.3", 0, 0, 0)
+    issuer_63 = create_issuer_cert("Issuer 6.3", 1582603941, 2592000, 0, valid_sig=False)
     issuer_64 = create_issuer_cert("Issuer 6.4", 0, 0, 0)
     issuer_65 = create_issuer_cert("Issuer 6.5", 1582603941, 2592000, 1)
     issuer_66 = create_issuer_cert("Issuer 6.6", 1582603941, 2592000, 0)  # should not be in trust store
@@ -1402,6 +1421,7 @@ def setup_generate_updated_trust_store():
 
 def setup_generate_certificates(trusted_list):
     issuer_62, issuer_63, issuer_64, issuer_65, issuer_66, issuer_67, issuer_10 = trusted_list
+    generate_certs_63(issuer_63)
     generate_certs_64(issuer_64)
     generate_certs_65(issuer_65)
     generate_certs_66(issuer_66)
