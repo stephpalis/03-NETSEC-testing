@@ -1,0 +1,585 @@
+#! /usr/bin/env python3
+##################################################
+############ CLIENT FOR TESTING PURPOSES
+##################################################
+import sys, yaml, socket, struct, binascii
+import nstp_v4_pb2 as nstp_proto
+import nacl.bindings
+import time
+import hashlib
+import socket
+
+client_cert_file = open("/data/client.crt", "rb").read()
+client_cert      = nstp_proto.Certificate()
+client_cert.ParseFromString(client_cert_file)
+
+client_private_key_file = open("/data/client.key", "rb").read()
+client_private_key      = nstp_proto.PrivateKey()
+client_private_key.ParseFromString(client_private_key_file)
+
+ca_private_key_file = open("/data/ca.key", "rb").read()
+ca_private_key      = nstp_proto.PrivateKey()
+ca_private_key.ParseFromString(ca_private_key_file)
+
+with open("/data/status.crt", "rb") as status_cert_file:
+  status_cert = nstp_proto.Certificate()
+  status_cert.ParseFromString(status_cert_file.read())
+
+with open("/data/status.key", "rb") as status_private_key_file:
+  status_private_key = nstp_proto.PrivateKey()
+  status_private_key.ParseFromString(status_private_key_file.read())
+
+trusted_cert_store      = nstp_proto.CertificateStore()
+trusted_cert_store_file = open("/data/mod_trusted_certs.db", "rb").read()
+trusted_cert_store.ParseFromString(trusted_cert_store_file)
+
+pinned_cert_store       = nstp_proto.PinnedCertificateStore()
+pinned_cert_store_file  = open("/data/mod_pinned_certs.db", "rb").read()
+pinned_cert_store.ParseFromString(pinned_cert_store_file)
+
+# Set up the server socket
+server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_sock.connect(("172.17.0.1", 22300))
+# Set up the status socket
+status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+status_sock.connect(("127.0.0.1", 22301))
+
+
+def updateTrustStore():
+  self_signed_client  = nstp_proto.Certificate()
+  self_signed_client.subjects.extend(['hello'])
+  self_signed_client.valid_from = 1582603941
+  self_signed_client.valid_length = 2592000
+  self_signed_client.usages.extend([1])
+  self_signed_client.encryption_public_key = client_cert.encryption_public_key
+  self_signed_client.signing_public_key = client_cert.signing_public_key
+  issuer_signature = signCert(self_signed_client, True)
+  self_signed_client.issuer_signature = issuer_signature
+
+  append_trusted      = nstp_proto.CertificateStore()
+  append_trusted_file = open("/data/mod_trusted_certs.db", "rb")
+  append_trusted.ParseFromString(append_trusted_file.read())
+  append_trusted.certificates.extend([self_signed_client])
+  append_trusted_file.close()
+  append_trusted_file = open("/data/mod_trusted_certs.db", "wb")
+  append_trusted_file.write(append_trusted.SerializeToString())
+  append_trusted_file.close()
+  print(append_trusted)
+
+def main():
+  updateTrustStore()
+  #testValid1()
+
+
+  # After each test, receive the result
+  print('Receiving a new NSTPMessage')
+  nstp_msg = nstp_proto.NSTPMessage()
+  msg_length_recv = recvSafe(server_sock, 2)
+  msg_length = int(binascii.hexlify(msg_length_recv), 16)
+  print('msg_length=' + str(msg_length))
+  data = recvSafe(server_sock, msg_length)
+  nstp_msg.ParseFromString(data)
+  print('Received NSTPMessage:')
+  print(nstp_msg)
+
+##################################################
+############ Test valid client certs
+##################################################
+'''
+1) Self-signed      -- DONE
+2) Has issuer       -- DONE
+3) Has multiple pinned subjects, one validates one does not
+4) Has all usages   -- 
+'''
+
+##################################################
+############ 1) Self-signed
+##################################################
+def testValid1():
+  print('In testValid1')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'validtest1'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, True)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 2) Has Issuer
+##################################################
+def testValid2():
+  print('In testValid2')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'validtest2'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = client_cert.issuer.algorithm
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 3) Has multiple pinned subjects, one validates one does not
+##################################################
+def testValid3():
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'validtest3'
+
+  # Parse the cert for the server
+  print(client_cert)
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+############ 4) Duration is not valid
+##################################################
+def testInvalid4():
+  print('In testInvalid4')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test4'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 1
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = client_cert.issuer.algorithm
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+
+##################################################
+############ 5) Is not of type CLIENT_AUTH
+##################################################
+def testInvalid5():
+  print('In testInvalid5')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test5'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([0])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = client_cert.issuer.algorithm
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+
+##################################################
+############ 6.1) More Than One Subject
+##################################################
+def testInvalid6():
+  print('In testInvalid6')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test6.1'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = 0
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+
+##################################################
+############ 7) Signature is not valid
+##################################################
+def testInvalid7():
+  print('In testInvalid7')
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test7'
+
+  # Parse the cert for the server
+  nstp_msg.client_hello.certificate.subjects.extend(['hello'])
+  nstp_msg.client_hello.certificate.valid_from = 1582603941
+  nstp_msg.client_hello.certificate.valid_length = 2592000
+  nstp_msg.client_hello.certificate.usages.extend([1])
+  nstp_msg.client_hello.certificate.encryption_public_key = client_cert.encryption_public_key
+  nstp_msg.client_hello.certificate.signing_public_key = client_cert.signing_public_key
+  nstp_msg.client_hello.certificate.issuer.value = client_cert.issuer.value
+  nstp_msg.client_hello.certificate.issuer.algorithm = client_cert.issuer.algorithm
+  issuer_signature = signCert(nstp_msg.client_hello.certificate, False)
+  nstp_msg.client_hello.certificate.issuer_signature = issuer_signature
+  nstp_msg.client_hello.certificate.valid_length = 2592001
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', len(send_msg))
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+
+##################################################
+# 8) Stapled certificate does not validate
+##################################################
+def testInvalid8():
+  # certificate status is REVOKED
+
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test8'
+
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+  nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
+  nstp_msg.client_hello.certificate_status.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status = nstp_proto.CertificateStatus.REVOKED
+  nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
+  nstp_msg.client_hello.certificate_status.valid_length = 2592000
+  nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
+  nstp_msg.client_hello.certificate_status.status_signature = response_signature(nstp_msg.client_hello.certificate_status, status_private_key.signing_private_key)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+##################################################
+# 9) Queried certificate does not validate
+##################################################
+# make sure that there is no status server running for this test
+# assumes your status server address is 127.0.0.1 / 22301
+
+def testInvalid9():
+  # create status server sock
+  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  status_sock.bind(('0.0.0.0', 22301))
+
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test9'
+
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+  
+  data, addr = status_sock.recvfrom(1024)
+  req = nstp_proto.CertificateStatusRequest()
+  req.ParseFromString(data)
+  print("req")
+  print(req)
+
+  resp = nstp_proto.CertificateStatusResponse()
+  resp.certificate.CopyFrom(req.certificate)
+  resp.status = nstp_proto.CertificateStatus.REVOKED
+  resp.valid_from = int(time.time())
+  resp.valid_length = 2592000
+  resp.status_certificate.CopyFrom(status_cert)
+  resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
+  print("resp")
+  print(resp)
+
+  status_sock.sendto(resp.SerializeToString(), addr)
+  print('Sent CertificateStatusResponse')
+
+##################################################
+# 10) Stapled certificate does validate but has uncommon trust root
+##################################################
+def testInvalid10():
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test10'
+
+  other_ca = nstp_proto.Certificate()
+  other_ca.CopyFrom(trusted_cert_store.certificates[1])
+
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+  nstp_msg.client_hello.certificate_status.certificate.value = create_hash(client_cert, hashlib.sha512())
+  nstp_msg.client_hello.certificate_status.certificate.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status = nstp_proto.CertificateStatus.VALID
+  nstp_msg.client_hello.certificate_status.valid_from = int(time.time())
+  nstp_msg.client_hello.certificate_status.valid_length = 2592000
+  nstp_msg.client_hello.certificate_status.status_certificate.CopyFrom(status_cert)
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  nstp_msg.client_hello.certificate_status.status_certificate.issuer_signature = cert_signature(nstp_msg.client_hello.certificate_status.status_certificate, ca_private_key.signing_private_key)
+  nstp_msg.client_hello.certificate_status.status_signature = response_signature(nstp_msg.client_hello.certificate_status, status_private_key.signing_private_key)
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+
+##################################################
+# 11) Queried certificate does validate but has uncommon trust root
+##################################################
+# make sure that there is no status server running for this test
+# assumes your status server address is 127.0.0.1 / 22301
+
+def testInvalid11():
+  # create status server sock
+  status_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  status_sock.bind(('0.0.0.0', 22301))
+
+  # Create the ClientHello response
+  nstp_msg = nstp_proto.NSTPMessage()
+  nstp_msg.client_hello.major_version = 4
+  nstp_msg.client_hello.minor_version = 4444444
+  nstp_msg.client_hello.user_agent = 'test11'
+  nstp_msg.client_hello.certificate.CopyFrom(client_cert)
+
+  other_ca = nstp_proto.Certificate()
+  other_ca.CopyFrom(trusted_cert_store.certificates[1])
+
+  send_msg = nstp_msg.SerializeToString()
+  msg_length = struct.pack('!H', nstp_msg.ByteSize())
+  server_sock.send(msg_length + send_msg)
+  print('Sent ClientHello')
+
+  data, addr = status_sock.recvfrom(1024)
+  req = nstp_proto.CertificateStatusRequest()
+  req.ParseFromString(data)
+
+  resp = nstp_proto.CertificateStatusResponse()
+  resp.certificate.CopyFrom(req.certificate)
+  resp.status = nstp_proto.CertificateStatus.VALID
+  resp.valid_from = int(time.time())
+  resp.valid_length = 2592000
+  resp.status_certificate.CopyFrom(status_cert)
+  resp.status_certificate.issuer.value = create_hash(other_ca, hashlib.sha512())
+  resp.status_certificate.issuer.algorithm = nstp_proto.HashAlgorithm.SHA512
+  resp.status_certificate.issuer_signature = cert_signature(resp.status_certificate, ca_private_key.signing_private_key)
+  resp.status_signature = response_signature(resp, status_private_key.signing_private_key)
+
+  status_sock.sendto(resp.SerializeToString(), addr)
+  print('Sent CertificateStatusResponse')
+
+
+##################################################
+############ Helper Functions
+##################################################
+def signCert(cert, is_self_signed):
+  # Compute the sig over this cert
+  state = nacl.bindings.crypto_sign_ed25519ph_state()
+
+  # subject
+  for subject in cert.subjects:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, subject.encode('UTF-8'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_from.to_bytes(8, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_length.to_bytes(4, 'big'))
+  for usage in cert.usages:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, usage.to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.encryption_public_key)
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.signing_public_key)
+  if is_self_signed == False:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.value)
+    nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.algorithm.to_bytes(1, 'big'))
+
+  return nacl.bindings.crypto_sign_ed25519ph_final_create(state, ca_private_key.signing_private_key)
+
+
+def create_hash(cert: nstp_proto.Certificate, hasher):
+  for subject in cert.subjects:
+    hasher.update(subject.encode('UTF-8'))
+  hasher.update(cert.valid_from.to_bytes(8, 'big'))
+  hasher.update(cert.valid_length.to_bytes(4, 'big'))
+  for usage in cert.usages:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
+      hasher.update((0).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
+      hasher.update((1).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
+      hasher.update((2).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
+      hasher.update((3).to_bytes(1, 'big'))
+  hasher.update(cert.encryption_public_key)
+  hasher.update(cert.signing_public_key)
+  if cert.HasField("issuer"):
+    hasher.update(cert.issuer.value)
+    if cert.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
+      hasher.update((0).to_bytes(1, 'big'))
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
+      hasher.update((1).to_bytes(1, 'big'))
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
+      hasher.update((2).to_bytes(1, 'big'))
+  hasher.update(cert.issuer_signature)
+
+  return hasher.digest()
+
+
+def cert_signature(cert: nstp_proto.Certificate, signing_key):
+  state = nacl.bindings.crypto_sign_ed25519ph_state()
+  for subject in cert.subjects:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, subject.encode("UTF-8"))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_from.to_bytes(8, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.valid_length.to_bytes(4, 'big'))
+  for usage in cert.usages:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (3).to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.encryption_public_key)
+  nacl.bindings.crypto_sign_ed25519ph_update(state, cert.signing_public_key)
+  if cert.HasField("issuer"):
+    nacl.bindings.crypto_sign_ed25519ph_update(state, cert.issuer.value)
+    if cert.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+    elif cert.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+  return nacl.bindings.crypto_sign_ed25519ph_final_create(state, signing_key)
+
+
+def response_signature(resp: nstp_proto.CertificateStatusResponse, signing_key):
+  state = nacl.bindings.crypto_sign_ed25519ph_state()
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.certificate.value)
+  if resp.certificate.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+  elif resp.certificate.algorithm is nstp_proto.HashAlgorithm.SHA256:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+  elif resp.certificate.algorithm is nstp_proto.HashAlgorithm.SHA512:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+  if resp.status is nstp_proto.CertificateStatus.UNKNOWN:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+  elif resp.status is nstp_proto.CertificateStatus.VALID:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+  elif resp.status is nstp_proto.CertificateStatus.REVOKED:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.valid_from.to_bytes(8, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.valid_length.to_bytes(4, 'big'))
+
+  for subject in resp.status_certificate.subjects:
+    nacl.bindings.crypto_sign_ed25519ph_update(state, subject.encode("UTF-8"))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.valid_from.to_bytes(8, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.valid_length.to_bytes(4, 'big'))
+  for usage in resp.status_certificate.usages:
+    if usage is nstp_proto.CertificateUsage.CERTIFICATE_SIGNING:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.CLIENT_AUTHENTICATION:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.SERVER_AUTHENTICATION:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+    elif usage is nstp_proto.CertificateUsage.STATUS_SIGNING:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (3).to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.encryption_public_key)
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.signing_public_key)
+  if resp.status_certificate.HasField("issuer"):
+    nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.issuer.value)
+    if resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.IDENTITY:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (0).to_bytes(1, 'big'))
+    elif resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.SHA256:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (1).to_bytes(1, 'big'))
+    elif resp.status_certificate.issuer.algorithm is nstp_proto.HashAlgorithm.SHA512:
+      nacl.bindings.crypto_sign_ed25519ph_update(state, (2).to_bytes(1, 'big'))
+  nacl.bindings.crypto_sign_ed25519ph_update(state, resp.status_certificate.issuer_signature)
+
+  return nacl.bindings.crypto_sign_ed25519ph_final_create(state, signing_key)
+
+
+def recvSafe(sock, msg_length):
+  all_msg = b''
+  while len(all_msg) < msg_length:
+    tmp_recv = sock.recv(msg_length - len(all_msg))
+    if len(tmp_recv) == 0:
+      break
+    all_msg += tmp_recv
+  return all_msg
+
+def printCertStores():
+  test_file = open(sys.argv[1], "r")
+  config_file = yaml.load(test_file, Loader=yaml.FullLoader)
+  trusted_cert_store_loc  = config_file['trusted_certificate_store']
+  pinned_cert_store_loc   = config_file['pinned_certificate_store']
+
+  trusted_cert_store      = nstp_proto.CertificateStore()
+  trusted_cert_store_file = open(trusted_cert_store_loc, "rb").read()
+  trusted_cert_store.ParseFromString(trusted_cert_store_file)
+  print('Trusted certificate store')
+  print(trusted_cert_store)
+
+  pinned_cert_store       = nstp_proto.PinnedCertificateStore()
+  pinned_cert_store_file  = open(pinned_cert_store_loc, "rb").read()
+  pinned_cert_store.ParseFromString(pinned_cert_store_file)
+  print('Pinned certificate store')
+  print(pinned_cert_store)
+
+main()
+time.sleep(1)
+
