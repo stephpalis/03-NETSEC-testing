@@ -139,7 +139,11 @@ def main():
     test_invalid_10()
     expect_error_msg_clear()
 
-    input("\nSTOP YOUR STATUS SERVER, THEN PRESS ENTER...")
+    server_sock, status_sock = connect()
+    test_invalid_12()
+    expect_error_msg_clear()
+
+    input("\n[OPTIONAL] STOP YOUR STATUS SERVER, THEN PRESS ENTER...")
 
     server_sock, status_sock = connect()
     test_invalid_9()  # expects status server to NOT be running
@@ -188,6 +192,7 @@ def connect():
 9) Valid client certificate is revoked (queried)                      -- DONE
 10) Stapled certificate does validate but has uncommon trust root     -- DONE
 11) Queried certificate does validate but has uncommon trust root     -- DONE
+12) Self-signed client certificate not in trust store                 ** TBD
 '''
 
 ############################################################################################
@@ -854,6 +859,45 @@ def test_invalid_11():
 
 
 ############################################################################################
+# 12) Self-signed client certificate not in trust store
+############################################################################################
+def generate_certs_12(issuer_cert):
+    client_certificate_12 = nstp_proto.Certificate()
+    client_certificate_12.CopyFrom(issuer_cert)
+
+    client_certificate_12.usages.append(1)  # add usage CLIENT_AUTHENTICATION to root cert
+
+    issuer_signature = sign_cert(client_certificate_12, True)
+    client_certificate_12.issuer_signature = issuer_signature
+
+    write_data_file("pki/client_12.crt", client_certificate_12)
+    print("Successfully generated 'client_12.crt'")
+
+
+def test_invalid_12():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 12]: client certificate is self-signed but not in trust store")
+    print("#####" * 17)
+
+    client_certificate_12 = nstp_proto.Certificate()
+    read_data_file("/data/client_12.crt", client_certificate_12)
+
+    # Create the ClientHello response
+    nstp_msg = nstp_proto.NSTPMessage()
+    nstp_msg.client_hello.major_version = 4
+    nstp_msg.client_hello.minor_version = 3462
+    nstp_msg.client_hello.user_agent = 'test12'
+
+    nstp_msg.client_hello.certificate.CopyFrom(client_certificate_12)
+
+    send_msg = nstp_msg.SerializeToString()
+    msg_length = struct.pack('!H', nstp_msg.ByteSize())
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
 # ########### RESPONSE FUNCTIONS
 ############################################################################################
 class Message(Enum):
@@ -1268,6 +1312,7 @@ def setup_generate_certificates(trusted_list):
     generate_certs_65(six_five)
     generate_certs_9(ROOT_CERT)
     generate_certs_10(ten)
+    generate_certs_12(ROOT_CERT)
 
 
 # ====================================================================================
