@@ -630,6 +630,7 @@ def generate_certs_66(issuer_cert):
     client_certificate_66 = nstp_proto.Certificate()
     client_certificate_66.CopyFrom(client_cert)
 
+    client_certificate_66.subjects[0] = "client6.6"
     client_certificate_66.issuer.value = hash_cert(issuer_cert, 1)
     client_certificate_66.issuer.algorithm = 1
 
