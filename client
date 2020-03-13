@@ -119,9 +119,9 @@ def main():
     test_invalid_65()
     expect_error_msg_clear()
 
-    # server_sock, status_sock = connect()
-    # test_invalid_66()
-    # expect_error_msg_clear()
+    server_sock, status_sock = connect()
+    test_invalid_66()
+    expect_error_msg_clear()
 
     # server_sock, status_sock = connect()
     # test_invalid_67()
@@ -199,8 +199,10 @@ def connect():
 # ########### Test valid client certs
 ############################################################################################
 '''
-1) Self-signed
-2) Has issuer
+1) Self-signed                                                        -- DONE
+2) Has issuer                                                         -- DONE
+3) Has multiple pinned subjects, one validates one does not
+4) Has all usages 
 '''
 
 
@@ -614,6 +616,46 @@ def test_invalid_65():
     nstp_msg_65.client_hello.minor_version = 9385
     nstp_msg_65.client_hello.user_agent = 'test6.5'
     nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_65)
+
+    send_msg = nstp_msg_65.SerializeToString()
+    msg_length = struct.pack('!H', len(send_msg))
+    server_sock.send(msg_length + send_msg)
+    print('sent ClientHello')
+
+
+############################################################################################
+# ########### 6.6) Issuer is not valid: is not in trusted store
+############################################################################################
+def generate_certs_66(issuer_cert):
+    client_certificate_66 = nstp_proto.Certificate()
+    client_certificate_66.CopyFrom(client_cert)
+
+    client_certificate_66.issuer.value = hash_cert(issuer_cert, 1)
+    client_certificate_66.issuer.algorithm = 1
+
+    issuer_signature = sign_cert(client_certificate_66, False)
+    client_certificate_66.issuer_signature = issuer_signature
+
+    write_data_file("pki/client_66.crt", client_certificate_66)
+    print("Successfully generated 'client_66.crt'")
+
+
+def test_invalid_66():
+    print()
+    print("#####" * 17)
+    print("[TEST INVALID 6.6]: client certificate issuer missing from trust store")
+    print("#####" * 17)
+
+    # Read the client certificate
+    client_certificate_66 = nstp_proto.Certificate()
+    read_data_file("/data/client_66.crt", client_certificate_66)
+
+    # Create the ClientHello response
+    nstp_msg_65 = nstp_proto.NSTPMessage()
+    nstp_msg_65.client_hello.major_version = 4
+    nstp_msg_65.client_hello.minor_version = 28297
+    nstp_msg_65.client_hello.user_agent = 'test6.6'
+    nstp_msg_65.client_hello.certificate.CopyFrom(client_certificate_66)
 
     send_msg = nstp_msg_65.SerializeToString()
     msg_length = struct.pack('!H', len(send_msg))
@@ -1277,13 +1319,14 @@ def setup_generate_updated_trust_store():
     issuer_63 = create_issuer_cert("Issuer 6.3", 0, 0, 0)  # TODO
     issuer_64 = create_issuer_cert("Issuer 6.4", 0, 0, 0)
     issuer_65 = create_issuer_cert("Issuer 6.5", 1582603941, 2592000, 1)
-    issuer_66 = create_issuer_cert("Issuer 6.6", 0, 0, 0)  # TODO
+    issuer_66 = create_issuer_cert("Issuer 6.6", 1582603941, 2592000, 0)  # should not be in trust store
     issuer_67 = create_issuer_cert("Issuer 6.7", 0, 0, 0)  # TODO
     issuer_10 = create_issuer_cert("Issuer 10", 1582603941, 2592000, 0)
 
-    list_trusted = (issuer_62, issuer_63, issuer_64, issuer_65, issuer_66, issuer_67, issuer_10)
-    for trusted_cert in list_trusted:
+    list_partial = (issuer_62, issuer_63, issuer_64, issuer_65, issuer_67, issuer_10)  # excluding issuer_66
+    for trusted_cert in list_partial:
         trusted_certificate_store.certificates.append(trusted_cert)
+    list_trusted = (issuer_62, issuer_63, issuer_64, issuer_65, issuer_66, issuer_67, issuer_10)
 
     write_data_file("pki/trusted_certs_v2.db", trusted_certificate_store)
     write_data_file("pki/trusted_62.crt", issuer_62)
@@ -1307,11 +1350,12 @@ def setup_generate_updated_trust_store():
 
 
 def setup_generate_certificates(trusted_list):
-    six_two, six_three, six_four, six_five, six_six, six_seven, ten = trusted_list
-    generate_certs_64(six_four)
-    generate_certs_65(six_five)
+    issuer_62, issuer_63, issuer_64, issuer_65, issuer_66, issuer_67, issuer_10 = trusted_list
+    generate_certs_64(issuer_64)
+    generate_certs_65(issuer_65)
+    generate_certs_66(issuer_66)
     generate_certs_9(ROOT_CERT)
-    generate_certs_10(ten)
+    generate_certs_10(issuer_10)
     generate_certs_12(ROOT_CERT)
 
 
