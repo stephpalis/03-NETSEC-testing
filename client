@@ -185,7 +185,7 @@ def connect():
 6.3) Issuer is not valid: is pinned but does not validate             ** TBD
 6.4) Issuer is not valid: duration is not valid                       -- DONE
 6.5) Issuer is not valid: is not of type CERT_SIGNING                 -- DONE
-6.6) Issuer is not valid: is not in trusted store                     ** TBD
+6.6) Issuer is not valid: is not in trusted store                     -- DONE
 6.7) Issuer is not valid: issuer is not valid=?                       ** TBD
 7) Client certificate signature is not valid                          -- DONE
 8) Valid client certificate is revoked (stapled)                      -- DONE
