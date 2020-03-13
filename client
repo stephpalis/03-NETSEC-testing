@@ -192,7 +192,7 @@ def connect():
 9) Valid client certificate is revoked (queried)                      -- DONE
 10) Stapled certificate does validate but has uncommon trust root     -- DONE
 11) Queried certificate does validate but has uncommon trust root     -- DONE
-12) Self-signed client certificate not in trust store                 ** TBD
+12) Self-signed client certificate not in trust store                 -- DONE
 '''
 
 ############################################################################################
