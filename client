@@ -153,7 +153,7 @@ def main():
     test_invalid_11()  # expects status server to NOT be running
     expect_error_msg_clear()
 
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("SUCCESSFULLY COMPLETED ALL TESTS")
     print("#####" * 17)
@@ -210,7 +210,7 @@ def connect():
 # ########### 1) No Subjects
 ############################################################################################
 def test_invalid_1():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 1]: client certificate with no subjects")
     print("#####" * 17)
@@ -241,7 +241,7 @@ def test_invalid_1():
 # ########### 2) More Than One Subject
 ############################################################################################
 def test_invalid_2():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 2]: client certificate with more than one subject")
     print("#####" * 17)
@@ -273,7 +273,7 @@ def test_invalid_2():
 # ########### 3) Is pinned but does not validate
 ############################################################################################
 def test_invalid_3():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 3]: client certificate pinned but does not validate")
     print("#####" * 17)
@@ -297,7 +297,7 @@ def test_invalid_3():
 # ########### 4) Duration is not valid
 ############################################################################################
 def test_invalid_4():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 4]: client certificate time is invalid")
     print("#####" * 17)
@@ -329,7 +329,7 @@ def test_invalid_4():
 # ########### 5) Is not of type CLIENT_AUTH
 ############################################################################################
 def test_invalid_5():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 5]: client certificate missing usage CLIENT_AUTHENTICATION")
     print("#####" * 17)
@@ -361,7 +361,7 @@ def test_invalid_5():
 # ########### 6.1.0) Issuer is not valid: hashed with identity
 ############################################################################################
 def test_invalid_610():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.1.0]: client certificate issuer 'hashed' with identity")
     print("#####" * 17)
@@ -393,7 +393,7 @@ def test_invalid_610():
 # ########### 6.1.1) Issuer is not valid: sha256 hash given with algorithm 0
 ############################################################################################
 def test_invalid_611():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.1.1]: client certificate issuer hashed sha256, but listed identity")
     print("#####" * 17)
@@ -425,7 +425,7 @@ def test_invalid_611():
 # ########### 6.1.2) Issuer is not valid: sha256 hash given with algorithm 3
 ############################################################################################
 def test_invalid_612():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.1.2]: client certificate issuer hashed sha256, but listed '3'")
     print("#####" * 17)
@@ -457,7 +457,7 @@ def test_invalid_612():
 # ########### 6.2) Issuer is not valid: no subjects
 ############################################################################################
 def test_invalid_62():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.2]: client certificate issuer has no subjects")
     print("#####" * 17)
@@ -509,7 +509,7 @@ def generate_certs_63(issuer_cert):
 
 
 def test_invalid_63():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.3]: client certificate issuer is pinned but has invalid signature")
     print("#####" * 17)
@@ -553,9 +553,9 @@ def generate_certs_64(issuer_cert):
 
 
 def test_invalid_64():
-    print()
+    print("\n\n")
     print("#####" * 17)
-    print("[TEST INVALID 6.4]: client certificate issuer has cert has invalid time")
+    print("[TEST INVALID 6.4]: client certificate issuer has invalid time")
     print("#####" * 17)
     # Create the ClientHello response
     nstp_msg = nstp_proto.NSTPMessage()
@@ -603,7 +603,7 @@ def generate_certs_65(issuer_cert):
 
 
 def test_invalid_65():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.5]: client certificate issuer missing usage CERTIFICATE_SIGNING")
     print("#####" * 17)
@@ -644,7 +644,7 @@ def generate_certs_66(issuer_cert):
 
 
 def test_invalid_66():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.6]: client certificate issuer missing from trust store")
     print("#####" * 17)
@@ -685,7 +685,7 @@ def generate_certs_67(issuer_cert):
 
 
 def test_invalid_67():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 6.7]: client certificate issuer signature does not validate")
     print("#####" * 17)
@@ -711,7 +711,7 @@ def test_invalid_67():
 # ########### 7) Signature is not valid
 ############################################################################################
 def test_invalid_7():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 7]: client certificate signature is invalid")
     print("#####" * 17)
@@ -744,7 +744,7 @@ def test_invalid_7():
 # 8) Valid client certificate is revoked (stapled)
 ############################################################################################
 def test_invalid_8():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 8]: client certificate validates but is revoked (stapled)")
     print("#####" * 17)
@@ -792,7 +792,7 @@ def generate_certs_9(issuer_cert):
 
 
 def test_invalid_9():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 9]: client certificate validates but is revoked (queried)")
     print("#####" * 17)
@@ -855,7 +855,7 @@ def generate_certs_10(issuer_cert):
 
 
 def test_invalid_10():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 10]: client certificate validates but has uncommon trust root (stapled)")
     print("#####" * 17)
@@ -893,7 +893,7 @@ def test_invalid_10():
 # make sure that there is no status server running for this test
 # assumes your status server address is 127.0.0.1 / 22301
 def test_invalid_11():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 11]: client certificate validates but has uncommon trust root (queried)")
     print("#####" * 17)
@@ -961,7 +961,7 @@ def generate_certs_12(issuer_cert):
 
 
 def test_invalid_12():
-    print()
+    print("\n\n")
     print("#####" * 17)
     print("[TEST INVALID 12]: client certificate is self-signed but not in trust store")
     print("#####" * 17)
